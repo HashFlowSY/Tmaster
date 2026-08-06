@@ -1,0 +1,19 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# 允许原生模块运行构建脚本（pnpm v11.9）。better-sqlite3 用 node-api 预编译，esbuild 需其安装脚本。
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+
+minimumReleaseAgeExclude:
+  - '@expo/cli@57.0.13'
+  - '@expo/config-plugins@57.0.7'
+  - babel-preset-expo@57.0.6
+  - expo-asset@57.0.9
+  - expo-file-system@57.0.2
+  - expo-modules-core@57.0.10
+  - expo-router@57.0.11
+  - expo-symbols@57.0.2
+  - expo@57.0.11

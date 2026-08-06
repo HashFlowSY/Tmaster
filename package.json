@@ -1,0 +1,16 @@
+{
+  "name": "tianji",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "server": "pnpm --filter @tianji/server dev",
+    "mobile": "pnpm --filter @tianji/mobile start"
+  }
+}

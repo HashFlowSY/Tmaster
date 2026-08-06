@@ -1,0 +1,48 @@
+import { Hono } from 'hono';
+import { type AuthVariables, authMiddleware } from './auth/middleware';
+import type { Db } from './db/client';
+import type { Env } from './env';
+import { accountRoutes } from './routes/account';
+import { authRoutes } from './routes/auth';
+import { birthRoutes } from './routes/birth';
+import { chartRoutes } from './routes/chart';
+import { conversationRoutes } from './routes/conversations';
+import { messageRoutes } from './routes/messages';
+
+export interface AppDeps {
+  db: Db;
+  env: Env;
+}
+
+type GuardedApp = Hono<{ Variables: AuthVariables }>;
+
+/**
+ * 组装 Hono 应用。依赖显式注入（db/env），便于测试用内存库拉起整应用。
+ *
+ * 认证隔离：每个受保护前缀各自包一层带 `use('*')` 守卫的子应用，守卫作用域
+ * 限定在该前缀内，因此不会波及公共的 /api/auth（注册/登录）。
+ */
+export function createApp(deps: AppDeps) {
+  const guard = authMiddleware(deps.db, deps.env.JWT_SECRET, deps.env.SESSION_IDLE_MS);
+
+  const withGuard = (...subs: GuardedApp[]): GuardedApp => {
+    const g: GuardedApp = new Hono<{ Variables: AuthVariables }>();
+    g.use('*', guard);
+    for (const s of subs) g.route('/', s);
+    return g;
+  };
+
+  const api = new Hono();
+  api.route('/auth', authRoutes(deps)); // 公共
+  api.route('/account', withGuard(accountRoutes(deps)));
+  api.route('/birth-profile', withGuard(birthRoutes(deps)));
+  api.route('/bazi-chart', withGuard(chartRoutes(deps)));
+  api.route('/conversations', withGuard(conversationRoutes(deps), messageRoutes(deps)));
+
+  const app = new Hono();
+  app.get('/health', (c) => c.json({ ok: true }));
+  app.route('/api', api);
+  return app;
+}
+
+export type AppType = ReturnType<typeof createApp>;

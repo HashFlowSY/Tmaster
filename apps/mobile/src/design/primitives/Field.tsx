@@ -37,6 +37,8 @@ export interface FieldProps
   suffix?: string;
   /** 尾缀点击回调。 */
   onSuffixPress?: () => void;
+  /** 输入框下方的辅助说明文字（原型 .field .helper，如注册页密码建议）。 */
+  helper?: string;
   /** 获得焦点时上报（spec：Field 通过回调上报 focus，而非由样式断言）。 */
   onFocus?: () => void;
   /** 失去焦点时上报。 */
@@ -57,6 +59,7 @@ export function Field({
   icon,
   suffix,
   onSuffixPress,
+  helper,
   onFocus,
   onBlur,
   ...rest
@@ -106,6 +109,7 @@ export function Field({
           </Pressable>
         ) : null}
       </Animated.View>
+      {helper != null ? <Text style={styles.helper}>{helper}</Text> : null}
     </View>
   );
 }
@@ -153,5 +157,14 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     letterSpacing: tracking(0.04, 12.5),
     color: semantic.accentBright,
+  },
+  // 辅助说明：muted-2 / 11.5 / .02em，紧贴输入框下方（原型 .field .helper）。
+  helper: {
+    fontFamily: fonts.sans,
+    fontSize: 11.5,
+    letterSpacing: tracking(0.02, 11.5),
+    lineHeight: 11.5 * 1.5,
+    color: semantic.textFaint,
+    marginTop: 7,
   },
 });

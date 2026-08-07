@@ -23,3 +23,6 @@ export type { FieldProps } from './Field';
 
 export { Toast } from './Toast';
 export type { ToastProps } from './Toast';
+
+export { Checkbox } from './Checkbox';
+export type { CheckboxProps } from './Checkbox';

@@ -4,14 +4,15 @@
 组件从这里取:
 
 ```ts
-import { Screen, Icon, Eyebrow, HSerif, Sub, TextMute, LoginMark, Button, Field, Toast } from '../design/primitives';
+import { Screen, Icon, Eyebrow, HSerif, Sub, TextMute, LoginMark, Button, Field, Toast, Checkbox } from '../design/primitives';
 ```
 
 > 为何与 token 分两个 barrel:token barrel(`src/design`)是纯 TS、零组件依赖;primitive 引
 > react-native-svg / safe-area 等 RN 组件依赖。分开后,纯逻辑代码引 token 不会被动拖入原生组件依赖。
 
 issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记。issue 03(登录页属主)补齐首批
-交互型 primitive:`Button` / `Field`,以及 Tier-2 的 `Toast`。其余(`SegmentedControl`、`Card`、
+交互型 primitive:`Button` / `Field`,以及 Tier-2 的 `Toast`。issue 04(注册页属主)补齐 Tier-2
+自定义金色 `Checkbox`,并给 `Field` 增补 `helper` 说明文字槽。其余(`SegmentedControl`、`Card`、
 `BottomNav` 及 Tier-2 组件)在后续 issue 随属主页面落地。
 
 ## 组件
@@ -21,8 +22,9 @@ issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记�
 - **`Eyebrow` / `HSerif({ variant })` / `Sub` / `TextMute`** — type ramp(spec §4)的薄封装。
 - **`LoginMark({ size? })` / `MarkRing` / `MarkTaiji`** — 登录页品牌标记。`LoginMark` 静态叠合;`MarkRing`(外圈)/`MarkTaiji`(太极)拆分导出,供登录页对外圈单独施加自转。
 - **`Button({ variant, onPress, breathe?, disabled? })`** — 交互 primitive。primary=金渐变+金辉+r14;ghost=透明描边。按压缩放 + `breathe` 辉光走 Reanimated,订阅减动效。行为测试见 `Button.test.tsx`。
-- **`Field({ label, icon?, suffix?, onSuffixPress?, onFocus?, onBlur?, ...TextInputProps })`** — 交互 primitive。标签 + 前置图标 + TextInput + 可选尾缀;聚焦金色焦点环(边框渐入 + gold-soft 3px 环),focus 经回调上报。行为测试见 `Field.test.tsx`。
+- **`Field({ label, icon?, suffix?, onSuffixPress?, helper?, onFocus?, onBlur?, ...TextInputProps })`** — 交互 primitive。标签 + 前置图标 + TextInput + 可选尾缀 + 可选 `helper` 说明文字(原型 `.field .helper`,如注册页密码建议);聚焦金色焦点环(边框渐入 + gold-soft 3px 环),focus 经回调上报。行为测试见 `Field.test.tsx`。
 - **`Toast({ message, onHide, durationMs? })`** — Tier-2 轻提示。屏底居中胶囊,淡入上移,到时回调隐藏。登录页「其他登录方式 / 忘记密码」→「敬请期待」。
+- **`Checkbox({ checked, onChange, disabled?, children?, accessibilityLabel? })`** — Tier-2 自定义金色勾选框(RN 无可样式化原生 checkbox,故自绘)。16×16 方框(勾选=金填充 + 深墨金对勾)+ 右侧标签内容;切换 `checked` 并以取反值触发 `onChange`,`checkbox` 角色/状态供无障碍。行为测试见 `Checkbox.test.tsx`。
 
 ## 显式裁定(pixel-1:1 exceptions,spec User Story 29)
 
@@ -39,7 +41,8 @@ issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记�
 | 五行色 | 通用文字/图标原子一律不碰;五行色是「八字盘」内部按柱注入的数据编码(spec User Story 11/31)。 |
 | `Button` 的 breathe 呼吸 | 原型 `@keyframes breathe` 动画的是 `box-shadow`,RN 阴影不可原生动画(spec §Effects 裁定)。改为在按钮后叠一层带峰值金辉 `boxShadow` 的辉光层,用 Reanimated 脉动其 **opacity**。基础态仍保留静态金辉。 |
 | `Field` 的焦点环 | 原型 `.input:focus-within` 同时改边框色 + 加 gold-soft 3px 环。这里边框色用 `interpolateColor` 渐变,环用一层 `boxShadow:focusRing` 叠层的 **opacity** 渐入(裁定:焦点环走 Reanimated)。测试只断言 focus **回调**,不断言环样式。 |
-| `Field`/`Toast` 的一次性色 | `FOCUS_BORDER`(gold@55%)、`TOAST_BG`(墨@96%)、`TOAST_BORDER`(gold@40%)、primary 按钮文字 `#241a06` 是原型里各自场景的一次性值,非通用调色板 token,就地成常量并注明出处。 |
+| `Field`/`Toast`/`Checkbox` 的一次性色 | `FOCUS_BORDER`(gold@55%)、`TOAST_BG`(墨@96%)、`TOAST_BORDER`(gold@40%)、primary 按钮文字与 `Checkbox` 对勾 `#241a06`(金底上的深墨金)是原型里各自场景的一次性值,非通用调色板 token,就地成常量并注明出处。 |
+| `Checkbox` 为自绘、且对勾用内联 SVG | 原型是 `<input type=checkbox accent-color:gold>` 原生控件,RN 无法样式化(spec §7 裁定),故自绘 16×16 方框:勾选=`accent` 金填充,未勾=`surfaceInput` 底 + `line` 描边。对勾无原型可移植路径(原生控件),就地用 react-native-svg 画一条标准 √,不入 `Icon` 注册表(注册表只存移植自原型的路径)。 |
 | `LoginHero` 的三处动效 | 星野 twinkle(整层 opacity)、罗盘 spin(仅 `MarkRing` 旋转,太极静止)、辉光 breathe(SVG `RadialGradient` 的 opacity 脉动)。三者均订阅「减少动态效果」→ 静止(spec User Story 15)。`LoginHero` 是登录屏专属复合件(单屏消费),置于 `src/components/`,不入 DS primitive。 |
 
 ## 测试

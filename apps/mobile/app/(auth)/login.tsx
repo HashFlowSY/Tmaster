@@ -16,16 +16,15 @@ import { fonts, tracking } from '../../src/design/typography';
 import { Button, Field, Icon, Screen, Toast } from '../../src/design/primitives';
 
 /**
- * 登录页（issue 06 重做）—— 复用注册的当场校验 / 错误就地 / 键盘友好范式（布局仍保留品牌区通栏，
- * 不套注册的弹性留白）。
+ * 登录页（issue 06 重做）—— 复用注册的当场校验 / 错误就地 / 键盘友好范式。
  *
  * 交互（spec §D / §B）：邮箱、密码失焦即校验，提交做总校验；错误就地画进对应 `Field`（无 `Alert`）；
  * 凭证错误经 `mapAuthError` 落到密码框下方「邮箱或密码错误」（`invalid_credentials`），限流 / 网络 /
  * internal 走 `Toast`。校验与错误→字段映射复用票 02 纯函数，本屏只做接线。登录成功不在此跳转——由
  * `RootNav` 依 auth 态自动进入对话主页（现状不变）。
  *
- * 布局（spec §D）：`Screen` 开 `avoidKeyboard`；`LoginHero` 在任一输入聚焦时收缩淡出、失焦恢复，
- * 把空间让给表单（尊重 reduce-motion）。品牌区通栏，表单自带 26 横向留白。
+ * 布局：品牌区通栏、页面静态——聚焦输入时不做整页上移 / hero 收缩（按需求取消，保持沉稳）。
+ * 内容以 `flexGrow` 撑满视口，弹性间隔把「其他登录方式」下沉至底部、与底边留合理距离；矮屏自然滚动。
  *
  * 范围外（spec Out of Scope）：《用户协议》《隐私政策》维持纯说明文案、不可点；`忘记密码` 与「其他登录
  * 方式」维持惰性占位，本次不接。
@@ -38,24 +37,15 @@ export default function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  // 字段级错误（缺席即该字段无错）+ 已聚焦收缩 hero 的焦点态（任一字段聚焦即收起）。
+  // 字段级错误（缺席即该字段无错）。
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [focused, setFocused] = useState<Record<LoginField, boolean>>({
-    email: false,
-    password: false,
-  });
-  const heroCollapsed = focused.email || focused.password;
 
   const patchError = (field: LoginField, message: string | undefined) =>
     setErrors((prev) => ({ ...prev, [field]: message }));
 
-  // 聚焦：收起 hero；失焦：展开 hero + 就地校验该字段（复用票 02 纯函数）。
-  const onFocusField = (field: LoginField) => () =>
-    setFocused((prev) => ({ ...prev, [field]: true }));
-  const onBlurField = (field: LoginField) => () => {
-    setFocused((prev) => ({ ...prev, [field]: false }));
+  // 失焦即就地校验该字段（复用票 02 纯函数）。
+  const onBlurField = (field: LoginField) => () =>
     patchError(field, loginFieldError(field, { email, password }));
-  };
 
   const onChangeEmail = (v: string) => {
     setEmail(v);
@@ -91,8 +81,8 @@ export default function LoginScreen() {
   const soon = () => setToast('敬请期待');
 
   return (
-    <Screen scroll avoidKeyboard contentStyle={styles.content}>
-      <LoginHero collapsed={heroCollapsed} />
+    <Screen scroll contentStyle={styles.content}>
+      <LoginHero />
 
       <View style={styles.form}>
         <Field
@@ -100,7 +90,6 @@ export default function LoginScreen() {
           icon="mail"
           value={email}
           onChangeText={onChangeEmail}
-          onFocus={onFocusField('email')}
           onBlur={onBlurField('email')}
           error={errors.email}
           placeholder="请输入邮箱"
@@ -114,7 +103,6 @@ export default function LoginScreen() {
           icon="lock"
           value={password}
           onChangeText={onChangePassword}
-          onFocus={onFocusField('password')}
           onBlur={onBlurField('password')}
           error={errors.password}
           placeholder="请输入密码"
@@ -133,6 +121,9 @@ export default function LoginScreen() {
           linkLabel="注册天机账号"
           onPress={() => router.push('/register')}
         />
+
+        {/* 弹性间隔：把「其他登录方式」下沉至底部（高屏），矮屏塌陷为 minHeight 交由滚动。 */}
+        <View style={styles.spacer} />
 
         <View style={styles.or}>
           <View style={styles.orLine} />
@@ -160,11 +151,15 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 0 }, // hero 需通栏；表单自带 26 留白
-  form: { paddingHorizontal: 26, paddingTop: 34 },
+  // flexGrow 撑满视口，令弹性间隔在高屏把「其他登录方式」下沉；hero 需通栏故横向留白归零。
+  content: { flexGrow: 1, paddingHorizontal: 0 },
+  // 表单以 flex 撑满 hero 之下的余量，令内部弹性间隔生效；自带 26 横向留白 + 底部呼吸。
+  form: { flex: 1, paddingHorizontal: 26, paddingTop: 34, paddingBottom: 30 },
   submit: { marginTop: 6 },
+  // 弹性间隔：高屏把「其他登录方式」推向底部，矮屏塌陷为 minHeight 交由滚动。
+  spacer: { flexGrow: 1, minHeight: 28 },
   // .or：居中标签 + 两侧分隔线（原型 .or）。
-  or: { flexDirection: 'row', alignItems: 'center', gap: 14, marginVertical: 22 },
+  or: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 22 },
   orLine: { flex: 1, height: 1, backgroundColor: semantic.border },
   orText: {
     fontFamily: fonts.sans,
@@ -191,6 +186,6 @@ const styles = StyleSheet.create({
     letterSpacing: tracking(0.02, 11.5),
     color: semantic.textFaint,
     textAlign: 'center',
-    marginTop: 26,
+    marginTop: 22,
   },
 });

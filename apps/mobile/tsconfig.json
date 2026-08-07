@@ -2,10 +2,15 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    // TS 6 起默认不再自动纳入 node_modules/@types/*；测试文件的 jest 全局（describe/it/expect、jest 命名空间）
-    // 只来自 @types/jest，须在此显式列入。App 代码类型来自 react / react-native / expo 包自带，不受影响。
-    "types": ["jest"]
+    "types": [
+      "jest"
+    ]
   },
-  "include": ["**/*.ts", "**/*.tsx", "expo-env.d.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

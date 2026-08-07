@@ -2,10 +2,10 @@ import type { PublicUser } from '@tianji/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AuthApi } from '../../src/api/endpoints';
-import { useAuth } from '../../src/auth/AuthContext';
-import { theme } from '../../src/theme';
-import { Muted, Screen, Title } from '../../src/ui';
+import { AuthApi } from '../../../src/api/endpoints';
+import { useAuth } from '../../../src/auth/AuthContext';
+import { theme } from '../../../src/theme';
+import { Muted, Screen, Title } from '../../../src/ui';
 
 export default function ProfileScreen() {
   const router = useRouter();

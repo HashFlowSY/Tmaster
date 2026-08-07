@@ -2,10 +2,10 @@ import type { BaziChart, Pillar } from '@tianji/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { ApiError } from '../../src/api/client';
-import { ChartApi } from '../../src/api/endpoints';
-import { theme } from '../../src/theme';
-import { Muted, PrimaryButton, Screen, Title } from '../../src/ui';
+import { ApiError } from '../../../src/api/client';
+import { ChartApi } from '../../../src/api/endpoints';
+import { theme } from '../../../src/theme';
+import { Muted, PrimaryButton, Screen, Title } from '../../../src/ui';
 
 export default function ChartScreen() {
   const router = useRouter();

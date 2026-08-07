@@ -32,3 +32,6 @@ export type { SegmentedControlProps, SegmentedOption } from './SegmentedControl'
 
 export { Cascader } from './Cascader';
 export type { CascaderProps, CascaderCrumb, CascaderOption } from './Cascader';
+
+export { BottomNav } from './BottomNav';
+export type { BottomNavProps, BottomNavItem } from './BottomNav';

@@ -12,10 +12,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { ApiError } from '../../src/api/client';
-import { sendMessageStream } from '../../src/api/chatStream';
-import { ConversationApi } from '../../src/api/endpoints';
-import { theme } from '../../src/theme';
+import { ApiError } from '../../../src/api/client';
+import { sendMessageStream } from '../../../src/api/chatStream';
+import { ConversationApi } from '../../../src/api/endpoints';
+import { theme } from '../../../src/theme';
 
 interface UIMessage {
   id: string;

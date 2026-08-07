@@ -14,6 +14,7 @@ export const durations = {
   breatheGlow: 5000, // 登录罗盘 .glow 呼吸
   twinkle: 6000, // 星野闪烁
   spin: 60000, // 罗盘自转
+  toastHold: 1800, // toast 停留后自动隐藏（原型 setTimeout 1800）
 } as const;
 
 // 主减速缓动 cubic-bezier(.16,1,.3,1)，原型入场/过渡通用。

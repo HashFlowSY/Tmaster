@@ -1,24 +1,28 @@
-# 表现型 primitive(Tier-1 · issue 02)
+# primitive(Tier-1 · issue 02 表现型 + issue 03 交互型)
 
-每个页面复用的表现型骨架。token 从 `../` 取(`../palette`、`../semantic`、`../typography`…),
+每个页面复用的骨架与控件。token 从 `../` 取(`../palette`、`../semantic`、`../typography`…),
 组件从这里取:
 
 ```ts
-import { Screen, Icon, Eyebrow, HSerif, Sub, TextMute, LoginMark } from '../design/primitives';
+import { Screen, Icon, Eyebrow, HSerif, Sub, TextMute, LoginMark, Button, Field, Toast } from '../design/primitives';
 ```
 
 > 为何与 token 分两个 barrel:token barrel(`src/design`)是纯 TS、零组件依赖;primitive 引
 > react-native-svg / safe-area 等 RN 组件依赖。分开后,纯逻辑代码引 token 不会被动拖入原生组件依赖。
 
-本 issue 只交付 Tier-1 里的表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记。交互型
-primitive(`Button` / `Field` / `SegmentedControl`)及各 Tier-2 组件在后续 issue 随属主页面落地。
+issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记。issue 03(登录页属主)补齐首批
+交互型 primitive:`Button` / `Field`,以及 Tier-2 的 `Toast`。其余(`SegmentedControl`、`Card`、
+`BottomNav` 及 Tier-2 组件)在后续 issue 随属主页面落地。
 
 ## 组件
 
 - **`Screen({ children, header?, scroll?, style?, contentStyle? })`** — 安全区内边距 + `bg` 底 + 内容/标题两档横向留白。
 - **`Icon({ name, color?, size?, strokeWidth?, accessibilityLabel? })`** — 按名渲染移植自原型的线性图标。见 `./icons.ts` 注册表(名 → 原型用途注释,可 grep 反查)。
 - **`Eyebrow` / `HSerif({ variant })` / `Sub` / `TextMute`** — type ramp(spec §4)的薄封装。
-- **`LoginMark({ size? })`** — 登录页品牌标记(外圈 + 太极),静态。
+- **`LoginMark({ size? })` / `MarkRing` / `MarkTaiji`** — 登录页品牌标记。`LoginMark` 静态叠合;`MarkRing`(外圈)/`MarkTaiji`(太极)拆分导出,供登录页对外圈单独施加自转。
+- **`Button({ variant, onPress, breathe?, disabled? })`** — 交互 primitive。primary=金渐变+金辉+r14;ghost=透明描边。按压缩放 + `breathe` 辉光走 Reanimated,订阅减动效。行为测试见 `Button.test.tsx`。
+- **`Field({ label, icon?, suffix?, onSuffixPress?, onFocus?, onBlur?, ...TextInputProps })`** — 交互 primitive。标签 + 前置图标 + TextInput + 可选尾缀;聚焦金色焦点环(边框渐入 + gold-soft 3px 环),focus 经回调上报。行为测试见 `Field.test.tsx`。
+- **`Toast({ message, onHide, durationMs? })`** — Tier-2 轻提示。屏底居中胶囊,淡入上移,到时回调隐藏。登录页「其他登录方式 / 忘记密码」→「敬请期待」。
 
 ## 显式裁定(pixel-1:1 exceptions,spec User Story 29)
 
@@ -33,6 +37,10 @@ primitive(`Button` / `Field` / `SegmentedControl`)及各 Tier-2 组件在后续 
 | `TextMute` 无独立 ramp 行 | 复用 `sub` 的字体度量(族/字号/字距/行高来自 type ramp),仅把角色色改成最弱的 `textFaint`(muted-2)。是 `Sub` 的弱化姊妹。 |
 | 假状态栏 / 刘海 | `Screen` **不画**;用真 OS 状态栏(`app/_layout` 的 expo-status-bar),安全区顶部内边距把内容顶到状态栏之下。 |
 | 五行色 | 通用文字/图标原子一律不碰;五行色是「八字盘」内部按柱注入的数据编码(spec User Story 11/31)。 |
+| `Button` 的 breathe 呼吸 | 原型 `@keyframes breathe` 动画的是 `box-shadow`,RN 阴影不可原生动画(spec §Effects 裁定)。改为在按钮后叠一层带峰值金辉 `boxShadow` 的辉光层,用 Reanimated 脉动其 **opacity**。基础态仍保留静态金辉。 |
+| `Field` 的焦点环 | 原型 `.input:focus-within` 同时改边框色 + 加 gold-soft 3px 环。这里边框色用 `interpolateColor` 渐变,环用一层 `boxShadow:focusRing` 叠层的 **opacity** 渐入(裁定:焦点环走 Reanimated)。测试只断言 focus **回调**,不断言环样式。 |
+| `Field`/`Toast` 的一次性色 | `FOCUS_BORDER`(gold@55%)、`TOAST_BG`(墨@96%)、`TOAST_BORDER`(gold@40%)、primary 按钮文字 `#241a06` 是原型里各自场景的一次性值,非通用调色板 token,就地成常量并注明出处。 |
+| `LoginHero` 的三处动效 | 星野 twinkle(整层 opacity)、罗盘 spin(仅 `MarkRing` 旋转,太极静止)、辉光 breathe(SVG `RadialGradient` 的 opacity 脉动)。三者均订阅「减少动态效果」→ 静止(spec User Story 15)。`LoginHero` 是登录屏专属复合件(单屏消费),置于 `src/components/`,不入 DS primitive。 |
 
 ## 测试
 

@@ -36,6 +36,9 @@ export type { CascaderProps, CascaderCrumb, CascaderOption } from './Cascader';
 export { BottomNav } from './BottomNav';
 export type { BottomNavProps, BottomNavItem } from './BottomNav';
 
+export { Card } from './Card';
+export type { CardProps } from './Card';
+
 // Tier-2 对话页组件（issue 07）。
 export { TabDrop } from './TabDrop';
 export type { TabDropProps, TabDropItem } from './TabDrop';
@@ -51,3 +54,13 @@ export type { ChatMessageProps } from './ChatMessage';
 
 export { Composer } from './Composer';
 export type { ComposerProps } from './Composer';
+
+// Tier-2 命盘页组件（issue 08）。
+export { Pillars } from './Pillars';
+export type { PillarsProps, PillarView } from './Pillars';
+
+export { ElementBars } from './ElementBars';
+export type { ElementBarsProps, ElementBar } from './ElementBars';
+
+export { QiMenGrid } from './QiMenGrid';
+export type { QiMenGridProps, PalaceCell } from './QiMenGrid';

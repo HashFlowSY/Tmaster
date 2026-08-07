@@ -56,7 +56,7 @@ Node/Metro 模块解析上冲突(文件名优先于同名目录,`./theme` 永远
 ## 间距 / 圆角 / 阴影 / 动效
 
 - `spacing`/`gutter`(`./spacing.ts`):`gutter.content=26`、`gutter.header=22` 对应原型 `.pad`/标题留白。
-- `radii`(`./radii.ts`):`input=13`(`.input`)、`button=14`(`.btn`)、`md=12`(最常用)、`pill=999`、`round=9999`(50%)。
+- `radii`(`./radii.ts`):`input=13`(`.input`)、`button=14`(`.btn`)、`md=12`(最常用)、`card=18`(`.chartcard` 命盘卡)、`pill=999`、`round=9999`(50%)。
 - `shadows`(`./shadows.ts`):新架构内建 `boxShadow` 字符串,1:1 取自原型 `box-shadow`;`focusRing` 对应
   `.input:focus-within` 的 3px gold-soft 环。
 - `motion`(`./motion.ts`):`durations` 取自原型 transition/animation;`easing.standard=[.16,1,.3,1]`;

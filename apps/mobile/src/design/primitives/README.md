@@ -13,8 +13,9 @@ import { Screen, Icon, Eyebrow, HSerif, Sub, TextMute, LoginMark, Button, Field,
 issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记。issue 03(登录页属主)补齐首批
 交互型 primitive:`Button` / `Field`,以及 Tier-2 的 `Toast`。issue 04(注册页属主)补齐 Tier-2
 自定义金色 `Checkbox`,并给 `Field` 增补 `helper` 说明文字槽。issue 05(生辰引导页属主)补齐 Tier-1
-`SegmentedControl` 与 Tier-2 级联选择器 `Cascader`。其余(`Card`、`BottomNav` 及 Tier-2 组件)在后续
-issue 随属主页面落地。
+`SegmentedControl` 与 Tier-2 级联选择器 `Cascader`。issue 06 补齐 `BottomNav`。issue 07(对话页属主)
+补齐 Tier-2 对话件 `TabDrop` / `Persona` / `KvCard` / `ChatMessage` / `Composer`。issue 08(命盘页属主)
+补齐 Tier-1 `Card` 与 Tier-2 命盘件 `Pillars` / `ElementBars` / `QiMenGrid`。
 
 ## 组件
 
@@ -28,6 +29,10 @@ issue 随属主页面落地。
 - **`Checkbox({ checked, onChange, disabled?, children?, accessibilityLabel? })`** — Tier-2 自定义金色勾选框(RN 无可样式化原生 checkbox,故自绘)。16×16 方框(勾选=金填充 + 深墨金对勾)+ 右侧标签内容;切换 `checked` 并以取反值触发 `onChange`,`checkbox` 角色/状态供无障碍。行为测试见 `Checkbox.test.tsx`。
 - **`SegmentedControl({ options, value, onChange, accessibilityLabel? })`** — Tier-1 交互 primitive(泛型 value)。ink-3 胶囊容器内等宽分段按钮,选中项 = `accentSoft` 填充 + gold-2 文字 + 金色内描边(原型 `.seg`)。按下以其 `value` 触发 `onChange`,`button` 角色 + `selected` 状态供无障碍。行为测试见 `SegmentedControl.test.tsx`。
 - **`Cascader({ crumbs, options, selected?, onSelect, onCrumbPress? })`** — Tier-2 级联选择器(生辰引导页属主)。顶部面包屑(已选级 gold-2 加粗 · 当前级象牙+金下划线,级间「/」)+ 可滚动选项列表,选中项 = gold-2 + 尾部金色 ✓(原型 `.cascader`)。按下选项以其 `value` 触发 `onSelect`,`button` 角色 + `selected` 状态供无障碍。传 `onCrumbPress` 时已选级面包屑可点(逐级下钻回上一级,当前级不可点)。行为测试见 `Cascader.test.tsx`。
+- **`Card({ children, padded?, style? })`** — Tier-1 表现型「有边框的容器面」(原型 `.chartcard`:ink-2 底 + line 描边 + r18 + padding18)。卡间距由属主页 gap 控制,不写进 Card 外边距。命盘三卡(命主/五行强弱/奇门局)属主。纯表现型,不设行为测试。
+- **`Pillars({ pillars })`** — Tier-2「八字盘」四柱网格(命盘页属主;裁定 text + View,不用 SVG)。每柱 = 柱名 + 大号衬线天干/地支(**五行色由属主派生注入**)+ 十神 + 藏干;日柱金色强调。自身不引 `palette.wx*`——五行数据编码色收敛在 `src/chart/fiveElement.ts`。纯表现型。
+- **`ElementBars({ bars })`** — 命盘「五行强弱」水平条(五行名 + ink-4 轨道 + 五行色填充 + 计数)。计数与色由 `chart/fiveElement.elementBalance` 派生注入(清点四柱干支),本组件不引 `palette.wx*`。条宽映射(满格 78% / 0 桩 6%)是纯视觉编码,不写测试。纯表现型。
+- **`QiMenGrid({ cells })`** — Tier-2「奇门局」九宫格(命盘页属主;裁定 text + View,不用 SVG)。3×3、每宫 = 门(衬线)+ 星宫;中宫金软底 + 金边、值符宫金边 + 内金环(奇门用**金色**强调,不涉五行色)。RN 无 CSS grid → 按行分块、方格 flex:1 + aspectRatio:1 保证等宽正方。纯表现型。
 
 ## 显式裁定(pixel-1:1 exceptions,spec User Story 29)
 
@@ -41,7 +46,13 @@ issue 随属主页面落地。
 | `Screen` 的「内容 26 / 标题 22」两档留白 | 内容区(children)用 `gutter.content=26`;可选 `header` 槽用 `gutter.header=22`。原型标题区留白比内容区窄,由此区分。 |
 | `TextMute` 无独立 ramp 行 | 复用 `sub` 的字体度量(族/字号/字距/行高来自 type ramp),仅把角色色改成最弱的 `textFaint`(muted-2)。是 `Sub` 的弱化姊妹。 |
 | 假状态栏 / 刘海 | `Screen` **不画**;用真 OS 状态栏(`app/_layout` 的 expo-status-bar),安全区顶部内边距把内容顶到状态栏之下。 |
-| 五行色 | 通用文字/图标原子一律不碰;五行色是「八字盘」内部按柱注入的数据编码(spec User Story 11/31)。 |
+| 五行色 | 通用文字/图标原子一律不碰;五行色是「八字盘」内部按柱注入的数据编码(spec User Story 11/31)。**全 App 唯一直接引用 `palette.wx*` 的地方是 `src/chart/fiveElement.ts`**——它把干/支查表映射到五行并派生色,`Pillars`/`ElementBars` 只接收派生好的颜色字符串,以此把数据编码色收敛在一处。 |
+| 命盘五行强弱计数 | 由 `fiveElement.elementBalance` 清点**四柱天干+地支**派生(不含藏干),是既有盘数据的可视化、非新排盘。与原型示例盘对齐:干支甲丙己丙/戌寅巳寅 → 金木水火土 0/3/0/3/2,正是原型 `.balance` 条宽 6/78/6/78/52 的计数(锁在 `fiveElement.test.ts`)。降级盘时柱为 null 自然跳过。 |
+| 命盘 命主 meta | 命造(乾/坤)与四柱来自真实 `ChartApi`;出生地/出生时间取自 `BirthApi`;真太阳时校正分钟数 = 真太阳时 − 钟表出生时间(就地计算)。任一缺项优雅降级(如退回农历),不编造。 |
+| 命盘 奇门局 | 无结构化 API:奇门局按 ADR-0001 由 AI 在对话文本中实时起局,排盘计算属 spec Out of Scope。故 `chart.tsx` 以就地常量 `SAMPLE_QIMEN`(原型示例阳遁三局)演示 `QiMenGrid` 版式,标题注「示例排布」+ helper 说明实时生成,不谎称为命主今日真实局。八门/九星/九宫为奇门固定词汇,非个人结论。 |
+| 命盘 喜用神/忌神 · 身强弱 | 属命理判断(排盘/断语,spec Out of Scope);无 API 且不可由计数推断,编造会误导。故五行强弱卡**省略**该页脚,只保留真实计数条 + 「日主X」注,而非填占位值。 |
+| 命盘 大运 | 原型 chart 屏无大运块(以奇门局取代),按「1:1 对齐原型」删去旧屏的大运列表;数据仍在 `ChartApi.decadeFortunes`,未来可另起页承载。 |
+| 命盘 icon-btn(分享) | `data-soon` 占位键:渲染 38×38 / ink-2 / r11 的分享键(1:1),按下走 `Alert`「敬请期待」——不真正接入分享(wiring 占位属 spec Out of Scope,仅给最小反馈)。r11 非通用 radii 档,就地成常量(同注册页返回键)。 |
 | `Button` 的 breathe 呼吸 | 原型 `@keyframes breathe` 动画的是 `box-shadow`,RN 阴影不可原生动画(spec §Effects 裁定)。改为在按钮后叠一层带峰值金辉 `boxShadow` 的辉光层,用 Reanimated 脉动其 **opacity**。基础态仍保留静态金辉。 |
 | `Field` 的焦点环 | 原型 `.input:focus-within` 同时改边框色 + 加 gold-soft 3px 环。这里边框色用 `interpolateColor` 渐变,环用一层 `boxShadow:focusRing` 叠层的 **opacity** 渐入(裁定:焦点环走 Reanimated)。测试只断言 focus **回调**,不断言环样式。 |
 | `Field`/`Toast` 等的一次性色 | `FOCUS_BORDER`(gold@55%)、`TOAST_BG`(墨@96%)、`TOAST_BORDER`(gold@40%)、`ChatMessage` 的 me 气泡渐变/头像径向色等,是原型里各自场景的一次性值,非通用调色板 token,就地成常量并注明出处。 |

@@ -27,6 +27,18 @@ interface FetchOptions extends RequestInit {
   auth?: boolean;
 }
 
+/**
+ * 会话在使用中失效的兜底钩子：任一「带鉴权」请求（`auth` 默认 true）拿到 401 时触发，
+ * 由 `AuthContext` 注册以清本地 token + 登出（RootNav 随之弹回登录）。集中在 `apiFetch` 一处，
+ * 使任一屏遇到过期/吊销会话都会被送回登录，而非卡在「看似已登录、实则每个请求都 401」的空壳。
+ * 登录/注册走 `auth:false`，其 401 是凭证错、不在此登出。
+ */
+type UnauthorizedHandler = () => void;
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  unauthorizedHandler = handler;
+}
+
 export async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
   const { auth = true, headers: initHeaders, ...rest } = options;
   const headers = new Headers(initHeaders);
@@ -45,6 +57,9 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
   // 错误信封形状复用共享 ApiErrorBody（服务器可能返回非法体，故按 Partial 宽松取用）。
   if (!res.ok) {
     const err = (body as { error?: Partial<ApiErrorBody['error']> }).error;
+    // 带鉴权请求的 401 = 会话已失效（过期/吊销/服务端重置）→ 通知上层登出。
+    // 凭证错的 401 只出现在登录/注册（auth:false），不触发。
+    if (res.status === 401 && auth) unauthorizedHandler?.();
     throw new ApiError(
       res.status,
       err?.code ?? 'unknown',

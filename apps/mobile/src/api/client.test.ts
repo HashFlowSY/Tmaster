@@ -1,4 +1,4 @@
-import { ApiError, apiFetch } from './client';
+import { ApiError, apiFetch, setUnauthorizedHandler } from './client';
 
 // apiFetch 缝（ADR-0008）：钉死客户端侧统一信封契约——
 // 2xx 一处解包 `.data`→T；非 2xx 从 `.error` 抛出带 fields 的 ApiError。
@@ -67,5 +67,43 @@ describe('apiFetch 统一信封解包', () => {
       status: 502,
       code: 'unknown',
     });
+  });
+});
+
+// 会话在使用中失效兜底：带鉴权请求（auth 默认 true）拿到 401 → 触发全局 handler，
+// 由 AuthContext 注册以清 token + 登出（RootNav 随之弹回登录）。登录/注册（auth:false）
+// 的 401 是凭证错、不应登出；非 401 错误也不应登出。
+describe('apiFetch 401 → unauthorized handler', () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    setUnauthorizedHandler(null);
+    jest.clearAllMocks();
+  });
+
+  it('带鉴权请求 401 → 触发 handler', async () => {
+    const onUnauthorized = jest.fn();
+    setUnauthorizedHandler(onUnauthorized);
+    mockFetch(401, { error: { code: 'unauthorized', message: '会话已过期，请重新登录' } });
+    await expect(apiFetch('/api/account/me')).rejects.toBeInstanceOf(ApiError);
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it('登录/注册（auth:false）401 不触发 handler（凭证错不应登出）', async () => {
+    const onUnauthorized = jest.fn();
+    setUnauthorizedHandler(onUnauthorized);
+    mockFetch(401, { error: { code: 'invalid_credentials', message: '邮箱或密码错误' } });
+    await expect(
+      apiFetch('/api/auth/login', { method: 'POST', auth: false, body: '{}' }),
+    ).rejects.toBeInstanceOf(ApiError);
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it('非 401 错误不触发 handler', async () => {
+    const onUnauthorized = jest.fn();
+    setUnauthorizedHandler(onUnauthorized);
+    mockFetch(500, { error: { code: 'internal', message: '出错了，请稍后再试' } });
+    await expect(apiFetch('/api/account/me')).rejects.toBeInstanceOf(ApiError);
+    expect(onUnauthorized).not.toHaveBeenCalled();
   });
 });

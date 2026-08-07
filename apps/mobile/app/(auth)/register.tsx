@@ -114,7 +114,7 @@ export default function RegisterScreen() {
             accessibilityLabel="返回登录"
             onPress={goLogin}
             style={styles.iconBtn}
-            hitSlop={6}
+            hitSlop={10}
           >
             <Icon name="back" color={semantic.textPrimary} size={18} />
           </Pressable>
@@ -212,8 +212,9 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   // 呼吸留白（仅本屏，经 contentStyle）：flexGrow 撑满视口，令弹性间隔在高屏把页脚下沉；矮屏自然滚动。
   content: { flexGrow: 1, paddingTop: 8, paddingBottom: 30 },
-  // 返回头:原型 .apphead .title-row（padding 6/14，左侧 icon-btn，右侧留空）。
-  titleRow: { flexDirection: 'row', alignItems: 'center', paddingTop: 6, paddingBottom: 14 },
+  // 返回头:左侧 icon-btn、右侧留空。顶部留 24 让返回键从安全区边缘明显下沉——避免贴着状态栏、
+  // 触感局促(原 6 太贴顶);与本屏「呼吸从容」一致，也给返回键更舒展的点按余地。
+  titleRow: { flexDirection: 'row', alignItems: 'center', paddingTop: 24, paddingBottom: 14 },
   // 原型 .icon-btn：38×38 / ink-2 底 / line 描边 / r11。
   iconBtn: {
     width: 38,

@@ -1,4 +1,4 @@
-import type { BaziChart, Gender, Role, System } from '@tianji/shared';
+import type { BaziChart, Gender, MessageCard, Role, System } from '@tianji/shared';
 import { sql } from 'drizzle-orm';
 import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
@@ -83,6 +83,8 @@ export const messages = sqliteTable('messages', {
     .references(() => conversations.id, { onDelete: 'cascade' }),
   role: text('role').$type<Role>().notNull(),
   content: text('content').notNull(),
+  // 可选结构化要点卡（原型 AI 气泡内 .card）；由模型尾块产出、服务端剥出（见 ai/card.ts）。空则纯文本消息。
+  card: text('card', { mode: 'json' }).$type<MessageCard>(),
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),

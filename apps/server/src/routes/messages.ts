@@ -6,6 +6,7 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import type { AppDeps } from '../app';
 import type { AuthVariables } from '../auth/middleware';
+import { extractCard, visibleCardPrefixLen } from '../ai/card';
 import type { ChatMessage } from '../ai/deepseek';
 import { streamChat } from '../ai/deepseek';
 import { buildChatMessages } from '../ai/prompts';
@@ -25,6 +26,7 @@ function toMessage(r: MessageRow): Message {
     role: r.role,
     content: r.content,
     createdAt: r.createdAt.toISOString(),
+    card: r.card ?? undefined,
   };
 }
 
@@ -91,15 +93,23 @@ export function messageRoutes({ db, env }: AppDeps) {
 
     return streamSSE(c, async (stream) => {
       let acc = '';
+      let sent = 0; // 已转发给客户端的可见字符数（永不越过 card 尾块 marker）
       try {
         for await (const delta of streamChat(deepseek, outbound)) {
           acc += delta;
-          const ev: ChatStreamEvent = { type: 'delta', text: delta };
-          await stream.writeSSE({ data: JSON.stringify(ev) });
+          // 只转发「确定不属于 card 尾块」的可见前缀，避免把 §CARD§{...} 泄露到气泡里。
+          const safe = visibleCardPrefixLen(acc);
+          if (safe > sent) {
+            const ev: ChatStreamEvent = { type: 'delta', text: acc.slice(sent, safe) };
+            await stream.writeSSE({ data: JSON.stringify(ev) });
+            sent = safe;
+          }
         }
+        // 流结束后从完整回复剥出正文与可选要点卡；落库正文（去尾块）+ 卡片。
+        const { content, card } = extractCard(acc);
         const assistantId = createId();
         db.insert(messages)
-          .values({ id: assistantId, conversationId: id, role: 'assistant', content: acc })
+          .values({ id: assistantId, conversationId: id, role: 'assistant', content, card: card ?? null })
           .run();
         db.update(conversations)
           .set({ updatedAt: new Date() })

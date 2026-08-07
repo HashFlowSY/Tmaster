@@ -14,8 +14,6 @@ import { fonts, tracking } from '../typography';
 import { useReducedMotion } from '../useReducedMotion';
 import { Icon } from './Icon';
 
-// 发送图标色 —— 金底上的深墨金（同 Button primary 文字），金色渐变上的一次性对比色，非通用 token。
-const SEND_ICON_COLOR = '#241a06';
 // 圆形发送按钮直径（原型 .send 40×40）。
 const SEND_SIZE = 40;
 
@@ -97,7 +95,7 @@ export function Composer({
             end={{ x: 0, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
-          <Icon name="send" color={SEND_ICON_COLOR} size={18} />
+          <Icon name="send" color={semantic.onAccent} size={18} />
         </Animated.View>
       </Pressable>
     </View>

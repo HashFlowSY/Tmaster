@@ -18,9 +18,6 @@ import { shadows } from '../shadows';
 import { typeRamp } from '../typography';
 import { useReducedMotion } from '../useReducedMotion';
 
-// primary 按钮文字色（原型 .btn-primary color:#241a06）——金底上的深墨金,一次性值,非通用 token。
-const PRIMARY_LABEL_COLOR = '#241a06';
-
 export interface ButtonProps {
   /** primary = 金色渐变主按钮；ghost = 透明描边次按钮（原型 .btn-primary / .btn-ghost）。 */
   variant: 'primary' | 'ghost';
@@ -146,7 +143,7 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.4 },
   label: { ...typeRamp.button, textAlign: 'center' },
-  // primary 文字用原型的深墨金；ghost 用象牙。
-  primaryLabel: { color: PRIMARY_LABEL_COLOR },
+  // primary 文字用金底上的深墨金（onAccent）；ghost 用象牙。
+  primaryLabel: { color: semantic.onAccent },
   ghostLabel: { color: semantic.textPrimary },
 });

@@ -44,7 +44,8 @@ issue 随属主页面落地。
 | 五行色 | 通用文字/图标原子一律不碰;五行色是「八字盘」内部按柱注入的数据编码(spec User Story 11/31)。 |
 | `Button` 的 breathe 呼吸 | 原型 `@keyframes breathe` 动画的是 `box-shadow`,RN 阴影不可原生动画(spec §Effects 裁定)。改为在按钮后叠一层带峰值金辉 `boxShadow` 的辉光层,用 Reanimated 脉动其 **opacity**。基础态仍保留静态金辉。 |
 | `Field` 的焦点环 | 原型 `.input:focus-within` 同时改边框色 + 加 gold-soft 3px 环。这里边框色用 `interpolateColor` 渐变,环用一层 `boxShadow:focusRing` 叠层的 **opacity** 渐入(裁定:焦点环走 Reanimated)。测试只断言 focus **回调**,不断言环样式。 |
-| `Field`/`Toast`/`Checkbox` 的一次性色 | `FOCUS_BORDER`(gold@55%)、`TOAST_BG`(墨@96%)、`TOAST_BORDER`(gold@40%)、primary 按钮文字与 `Checkbox` 对勾 `#241a06`(金底上的深墨金)是原型里各自场景的一次性值,非通用调色板 token,就地成常量并注明出处。 |
+| `Field`/`Toast` 等的一次性色 | `FOCUS_BORDER`(gold@55%)、`TOAST_BG`(墨@96%)、`TOAST_BORDER`(gold@40%)、`ChatMessage` 的 me 气泡渐变/头像径向色等,是原型里各自场景的一次性值,非通用调色板 token,就地成常量并注明出处。 |
+| 金底上的前景色 `#241a06`（onAccent） | 原本在 `Button`/`Checkbox`/`Composer` 各自就地成常量;因跨三个 primitive 复用(金色渐变/填充上的深墨金文字·对勾·发送图标),已提升为语义别名 `semantic.onAccent`。它不是原型 `:root` 变量,故不入 `palette`。 |
 | `Checkbox` 为自绘、且对勾用内联 SVG | 原型是 `<input type=checkbox accent-color:gold>` 原生控件,RN 无法样式化(spec §7 裁定),故自绘 16×16 方框:勾选=`accent` 金填充,未勾=`surfaceInput` 底 + `line` 描边。对勾无原型可移植路径(原生控件),就地用 react-native-svg 画一条标准 √,不入 `Icon` 注册表(注册表只存移植自原型的路径)。 |
 | `LoginHero` 的三处动效 | 星野 twinkle(整层 opacity)、罗盘 spin(仅 `MarkRing` 旋转,太极静止)、辉光 breathe(SVG `RadialGradient` 的 opacity 脉动)。三者均订阅「减少动态效果」→ 静止(spec User Story 15)。`LoginHero` 是登录屏专属复合件(单屏消费),置于 `src/components/`,不入 DS primitive。 |
 | `SegmentedControl` 选中项内描边 | 原型 `.seg button[aria-pressed]` 的 `box-shadow:inset 0 0 0 1px rgba(201,162,74,.35)`。落到 `shadows.segRing`(inset boxShadow 字符串,新架构支持);选中态无动画过渡(原型 transition 属装饰,视觉双端人工核对)。button 内圆角 9 非通用 radii 档,就地成常量。 |

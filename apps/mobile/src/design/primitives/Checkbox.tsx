@@ -4,9 +4,6 @@ import { Path, Svg } from 'react-native-svg';
 import { radii } from '../radii';
 import { semantic } from '../semantic';
 
-// 勾选标记色 —— 金底上的深墨金对勾（同 Button 的 primary 文字），金色填充上的一次性对比色，非通用 token。
-const CHECK_COLOR = '#241a06';
-
 export interface CheckboxProps {
   /** 勾选态（受控）。 */
   checked: boolean;
@@ -42,7 +39,7 @@ export function Checkbox({ checked, onChange, disabled = false, children, access
           <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
             <Path
               d="M5 12.5l4 4 10-10.5"
-              stroke={CHECK_COLOR}
+              stroke={semantic.onAccent}
               strokeWidth={2.6}
               strokeLinecap="round"
               strokeLinejoin="round"

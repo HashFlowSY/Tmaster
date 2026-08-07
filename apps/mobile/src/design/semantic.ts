@@ -15,6 +15,9 @@ export const semantic = {
   accent: palette.gold,
   accentBright: palette.gold2,
   accentSoft: palette.goldSoft,
+  // 金色渐变/填充之上的前景色（原型 .btn-primary color:#241a06 等内联深墨金）。它不是原型 :root 变量，
+  // 故不入 palette；作为 Button/Checkbox/Composer 共用的「on-accent」对比色提到语义层，避免各处重复魔法值。
+  onAccent: '#241a06',
 
   border: palette.line,
   borderFaint: palette.line2,

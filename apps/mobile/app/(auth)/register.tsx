@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../../src/api/client';
 import { useAuth } from '../../src/auth/AuthContext';
+import { AuthSwitchRow } from '../../src/components/AuthSwitchRow';
 import { semantic } from '../../src/design/semantic';
-import { fonts, tracking } from '../../src/design/typography';
+import { fonts } from '../../src/design/typography';
 import { Button, Checkbox, Eyebrow, Field, HSerif, Icon, Screen, Sub } from '../../src/design/primitives';
 
 /**
@@ -117,12 +118,7 @@ export default function RegisterScreen() {
         {busy ? '注 册 中…' : '注 册 并 起 盘'}
       </Button>
 
-      <View style={styles.between}>
-        <Text style={styles.textMute}>已有账号？</Text>
-        <Pressable onPress={goLogin} hitSlop={8}>
-          <Text style={styles.link}>直接登录</Text>
-        </Pressable>
-      </View>
+      <AuthSwitchRow prompt="已有账号？" linkLabel="直接登录" onPress={goLogin} centered />
     </Screen>
   );
 }
@@ -155,15 +151,4 @@ const styles = StyleSheet.create({
   },
   // 《用户协议》/《隐私政策》：gold-2（原型内联 color:var(--gold-2)）。
   consentLink: { color: semantic.accentBright },
-  // 原型 .between margin-top:16，居中，gap:8。
-  between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16 },
-  // 原型 .textmute：muted / 13。
-  textMute: { fontFamily: fonts.sans, fontSize: 13, color: semantic.textSecondary },
-  // 原型 .link：gold-2 / 13 / .04em。
-  link: {
-    fontFamily: fonts.sans,
-    fontSize: 13,
-    letterSpacing: tracking(0.04, 13),
-    color: semantic.accentBright,
-  },
 });

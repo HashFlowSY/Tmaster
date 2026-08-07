@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../../src/api/client';
 import { useAuth } from '../../src/auth/AuthContext';
+import { AuthSwitchRow } from '../../src/components/AuthSwitchRow';
 import { LoginHero } from '../../src/components/LoginHero';
 import { semantic } from '../../src/design/semantic';
-import { spacing } from '../../src/design/spacing';
 import { fonts, tracking } from '../../src/design/typography';
 import { Button, Field, Icon, Screen, Toast } from '../../src/design/primitives';
 
@@ -68,12 +68,11 @@ export default function LoginScreen() {
           </Button>
         </View>
 
-        <View style={styles.registerRow}>
-          <Text style={styles.textMute}>还没有账号？</Text>
-          <Pressable onPress={() => router.push('/register')} hitSlop={8}>
-            <Text style={styles.link}>注册天机账号</Text>
-          </Pressable>
-        </View>
+        <AuthSwitchRow
+          prompt="还没有账号？"
+          linkLabel="注册天机账号"
+          onPress={() => router.push('/register')}
+        />
 
         <View style={styles.or}>
           <View style={styles.orLine} />
@@ -104,21 +103,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 0 }, // hero 需通栏；表单自带 26 留白
   form: { paddingHorizontal: 26, paddingTop: 34 },
   submit: { marginTop: 6 },
-  registerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  // .textmute：muted / 13（原型）。
-  textMute: { fontFamily: fonts.sans, fontSize: 13, color: semantic.textSecondary },
-  // .link：gold-2 / 13 / .04em（原型）。
-  link: {
-    fontFamily: fonts.sans,
-    fontSize: 13,
-    letterSpacing: tracking(0.04, 13),
-    color: semantic.accentBright,
-  },
   // .or：居中标签 + 两侧分隔线（原型 .or）。
   or: { flexDirection: 'row', alignItems: 'center', gap: 14, marginVertical: 22 },
   orLine: { flex: 1, height: 1, backgroundColor: semantic.border },

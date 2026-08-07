@@ -71,3 +71,13 @@ export type { StatTileProps, StatItem } from './StatTile';
 
 export { MenuList } from './MenuList';
 export type { MenuListProps, MenuRow } from './MenuList';
+
+// Tier-2 历史/收藏页组件（issue 10）。
+export { ListRow } from './ListRow';
+export type { ListRowProps } from './ListRow';
+
+export { SearchBar } from './SearchBar';
+export type { SearchBarProps } from './SearchBar';
+
+export { Pager } from './Pager';
+export type { PagerProps } from './Pager';

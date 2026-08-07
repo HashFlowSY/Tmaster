@@ -1,4 +1,4 @@
-import { conversationMeta } from './conversationMeta';
+import { conversationMeta, relativeTime } from './conversationMeta';
 
 // 纯逻辑 seam（spec Testing Decisions）——对话切换器每项副标题「系统 · 相对时间」的格式化。
 // now 由调用方注入，函数内不取 Date.now()，故断言完全确定。只测可观察输出，不碰组件。
@@ -29,5 +29,22 @@ describe('conversationMeta', () => {
   it('时分个位数零补齐', () => {
     const iso = new Date(2026, 7, 6, 3, 5).toISOString();
     expect(conversationMeta('bazi', iso, now)).toBe('八字 · 今天 03:05');
+  });
+});
+
+// 相对时间被历史/收藏列表的 .ctime 直接复用（issue 10），故单独覆盖其可观察输出（无系统前缀）。
+describe('relativeTime', () => {
+  const now = new Date(2026, 7, 6, 14, 30); // 2026-08-06 14:30 本地
+
+  it('同一天显示「今天 HH:mm」', () => {
+    expect(relativeTime(new Date(2026, 7, 6, 9, 24), now)).toBe('今天 09:24');
+  });
+
+  it('前一天显示「昨天 HH:mm」', () => {
+    expect(relativeTime(new Date(2026, 7, 5, 21, 47), now)).toBe('昨天 21:47');
+  });
+
+  it('更早的日期显示零补齐的「MM-DD」', () => {
+    expect(relativeTime(new Date(2026, 7, 4, 10, 5), now)).toBe('08-04');
   });
 });

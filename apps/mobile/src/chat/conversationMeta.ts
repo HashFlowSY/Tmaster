@@ -9,9 +9,12 @@ export function conversationMeta(system: System, updatedAtIso: string, now: Date
   return `${systemLabel(system)} · ${relativeTime(new Date(updatedAtIso), now)}`;
 }
 
-// 相对时间：今天 → 「今天 HH:mm」；昨天 → 「昨天 HH:mm」；更早 → 零补齐「MM-DD」。
-// 全用本地日历分量比较与格式化，避免 UTC 偏移把「今天」算成「昨天」。
-function relativeTime(then: Date, now: Date): string {
+/**
+ * 相对时间：今天 → 「今天 HH:mm」；昨天 → 「昨天 HH:mm」；更早 → 零补齐「MM-DD」。
+ * 全用本地日历分量比较与格式化，避免 UTC 偏移把「今天」算成「昨天」。`now` 由调用方注入而非取
+ * `Date.now()`，令断言确定。历史/收藏列表的 .ctime 直接复用它（单一相对时间真源，spec issue 10）。
+ */
+export function relativeTime(then: Date, now: Date): string {
   const dayDiff = calendarDayDiff(then, now);
   if (dayDiff === 0) return `今天 ${hhmm(then)}`;
   if (dayDiff === 1) return `昨天 ${hhmm(then)}`;

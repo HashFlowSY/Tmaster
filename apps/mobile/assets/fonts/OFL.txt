@@ -1,0 +1,9 @@
+占位 —— 待补齐。
+
+本文件必须包含随 Noto Serif SC / Noto Sans SC 源字体附带的 **SIL Open Font License 1.1 完整原文**,
+以及 Noto 的版权声明与「保留字体名(Reserved Font Name)」声明,逐字拷贝、不得改写或摘编。
+
+请从下载到的字体包内的 LICENSE / OFL.txt 直接复制到这里,并在 App「开源许可 / 致谢」页展示
+(spec §Fonts、User Story 33:重分发内嵌字体需附 OFL 以合规)。
+
+不要用本占位文本充当许可正文。

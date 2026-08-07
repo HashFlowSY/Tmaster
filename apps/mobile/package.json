@@ -9,21 +9,27 @@
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "fonts:subset": "bash scripts/build-fonts.sh"
   },
   "dependencies": {
     "@tianji/shared": "workspace:*",
     "expo": "~57.0.11",
     "expo-constants": "~57.0.9",
+    "expo-font": "~57.0.1",
+    "expo-linear-gradient": "~57.0.1",
     "expo-router": "~57.0.11",
     "expo-secure-store": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.8",
     "react-native": "0.86.2",
+    "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.8.1",
-    "react-native-screens": "~4.26.2"
+    "react-native-screens": "~4.26.2",
+    "react-native-svg": "15.15.4"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^14.0.1",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.2.0",
     "jest": "^29.7.0",
@@ -31,6 +37,9 @@
     "typescript": "^5.7.2"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest-setup.ts"
+    ]
   }
 }

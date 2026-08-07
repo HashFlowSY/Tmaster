@@ -15,7 +15,21 @@
       "bundleIdentifier": "com.tianji.app",
       "supportsTablet": false
     },
-    "plugins": ["expo-router", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/NotoSerifSC-Regular.otf",
+            "./assets/fonts/NotoSansSC-Regular.otf",
+            "./assets/fonts/NotoSansSC-Medium.otf",
+            "./assets/fonts/NotoSansSC-SemiBold.otf"
+          ]
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": false
     }

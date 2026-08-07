@@ -25,6 +25,8 @@ apps/mobile/android/
 apps/mobile/ios/
 *.orig.*
 web-build/
+# 字体源文件与汉字表（仅子集化后的成品字体入库，源文件不入库）
+apps/mobile/assets/fonts/_src/
 
 # misc
 .DS_Store

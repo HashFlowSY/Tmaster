@@ -1,5 +1,4 @@
-import { zValidator } from '@hono/zod-validator';
-import { type ChatStreamEvent, type Message, SendMessageInputSchema } from '@tianji/shared';
+import { type ChatStreamEvent, type Message, SendMessageInputSchema, apiErrorBody } from '@tianji/shared';
 import { createId } from '@paralleldrive/cuid2';
 import { asc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
@@ -11,6 +10,7 @@ import type { ChatMessage } from '../ai/deepseek';
 import { streamChat } from '../ai/deepseek';
 import { buildChatMessages } from '../ai/prompts';
 import { type MessageRow, baziCharts, conversations, messages } from '../db/schema';
+import { zJson } from '../http/validate';
 
 /** 北京时间（UTC+8）墙钟字符串，如 "2026-08-06 14:30:00（北京时间 UTC+8）"。 */
 function beijingNowText(): string {
@@ -39,7 +39,7 @@ export function messageRoutes({ db, env }: AppDeps) {
     const id = c.req.param('id');
     const conv = db.select().from(conversations).where(eq(conversations.id, id)).get();
     if (!conv || conv.userId !== userId) {
-      return c.json({ error: { code: 'not_found', message: '对话不存在' } }, 404);
+      return c.json(apiErrorBody('not_found', '对话不存在'), 404);
     }
     const rows = db
       .select()
@@ -47,15 +47,15 @@ export function messageRoutes({ db, env }: AppDeps) {
       .where(eq(messages.conversationId, id))
       .orderBy(asc(messages.createdAt))
       .all();
-    return c.json(rows.map(toMessage));
+    return c.json({ data: rows.map(toMessage) });
   });
 
-  app.post('/:id/messages', zValidator('json', SendMessageInputSchema), async (c) => {
+  app.post('/:id/messages', zJson(SendMessageInputSchema), async (c) => {
     const userId = c.get('userId');
     const id = c.req.param('id');
     const conv = db.select().from(conversations).where(eq(conversations.id, id)).get();
     if (!conv || conv.userId !== userId) {
-      return c.json({ error: { code: 'not_found', message: '对话不存在' } }, 404);
+      return c.json(apiErrorBody('not_found', '对话不存在'), 404);
     }
     const { content } = c.req.valid('json');
 

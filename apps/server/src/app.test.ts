@@ -28,8 +28,8 @@ async function register(app: ReturnType<typeof createApp>, email: string) {
     headers: H,
     body: JSON.stringify({ email, password: 'password1' }),
   });
-  const body = (await res.json()) as { token: string };
-  return { res, token: body.token };
+  const body = (await res.json()) as { data?: { token: string; user: { email: string } } };
+  return { res, token: body.data?.token, body };
 }
 
 describe('集成：认证与对话网关', () => {
@@ -60,17 +60,45 @@ describe('集成：认证与对话网关', () => {
     expect(blocked.headers.get('Access-Control-Allow-Origin')).toBeNull();
   });
 
-  it('注册返回 token 与用户', async () => {
+  it('注册成功包进 {data}（token + user）；重复邮箱走 email_taken 错误信封', async () => {
     const app = makeApp();
-    const { res } = await register(app, 'a@b.com');
+    const { res, body } = await register(app, 'a@b.com');
     expect(res.status).toBe(201);
+    expect(typeof body.data?.token).toBe('string');
+    expect(body.data?.user.email).toBe('a@b.com');
+
     const again = await register(app, 'a@b.com'); // 重复邮箱
     expect(again.res.status).toBe(409);
+    const errBody = again.body as unknown as { error: { code: string; message: string } };
+    expect(errBody.error.code).toBe('email_taken');
+    expect(errBody.error.message).toBe('该邮箱已注册');
   });
 
-  it('未认证访问受保护路由 → 401；公共登录路由不被守卫波及', async () => {
+  it('zod 校验失败走统一 validation 信封，带字段级 fields', async () => {
     const app = makeApp();
-    expect((await app.request('/api/account/me')).status).toBe(401);
+    const res = await app.request('/api/auth/register', {
+      method: 'POST',
+      headers: H,
+      body: JSON.stringify({ email: 'not-an-email', password: 'short' }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as {
+      error: { code: string; message: string; fields?: Record<string, string> };
+    };
+    expect(body.error.code).toBe('validation');
+    expect(typeof body.error.message).toBe('string');
+    expect(body.error.fields?.email).toBe('邮箱格式不正确');
+    expect(body.error.fields?.password).toBe('密码至少 8 位');
+    // 成功与错误互斥：错误信封不带 data。
+    expect((body as { data?: unknown }).data).toBeUndefined();
+  });
+
+  it('未认证访问受保护路由 → 401 unauthorized 信封；公共登录路由不被守卫波及', async () => {
+    const app = makeApp();
+    const guarded = await app.request('/api/account/me');
+    expect(guarded.status).toBe(401);
+    const guardedBody = (await guarded.json()) as { error: { code: string } };
+    expect(guardedBody.error.code).toBe('unauthorized');
     // 登录端点本身可达（校验失败是 400/401，而非因守卫 401 缺凭证）
     const bad = await app.request('/api/auth/login', {
       method: 'POST',
@@ -80,7 +108,7 @@ describe('集成：认证与对话网关', () => {
     expect(bad.status).toBe(401);
   });
 
-  it('登录后可访问 me；错误密码 401', async () => {
+  it('登录成功包进 {data}；错误密码走 invalid_credentials 信封', async () => {
     const app = makeApp();
     await register(app, 'a@b.com');
     const bad = await app.request('/api/auth/login', {
@@ -89,16 +117,25 @@ describe('集成：认证与对话网关', () => {
       body: JSON.stringify({ email: 'a@b.com', password: 'wrong-pass' }),
     });
     expect(bad.status).toBe(401);
+    const badBody = (await bad.json()) as { error: { code: string; message: string } };
+    expect(badBody.error.code).toBe('invalid_credentials');
+    expect(badBody.error.message).toBe('邮箱或密码错误');
+
     const login = await app.request('/api/auth/login', {
       method: 'POST',
       headers: H,
       body: JSON.stringify({ email: 'a@b.com', password: 'password1' }),
     });
-    const { token } = (await login.json()) as { token: string };
+    const { data } = (await login.json()) as { data: { token: string } };
     const me = await app.request('/api/account/me', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${data.token}` },
     });
     expect(me.status).toBe(200);
+    // 代表性成功端点的信封形状：{ data: { id, email, createdAt } }。
+    const meBody = (await me.json()) as { data: { id: string; email: string; createdAt: string } };
+    expect(meBody.data.email).toBe('a@b.com');
+    expect(typeof meBody.data.id).toBe('string');
+    expect(typeof meBody.data.createdAt).toBe('string');
   });
 
   it('八字对话需先完善生辰（409），奇门不需要（201）', async () => {
@@ -143,8 +180,10 @@ describe('集成：认证与对话网关', () => {
 
     const chart = await app.request('/api/bazi-chart', { headers: auth });
     expect(chart.status).toBe(200);
-    const chartBody = (await chart.json()) as { dayMaster: string; pillars: { day: { stem: string } } };
-    expect(chartBody.pillars.day.stem).toBe(chartBody.dayMaster);
+    const chartBody = (await chart.json()) as {
+      data: { dayMaster: string; pillars: { day: { stem: string } } };
+    };
+    expect(chartBody.data.pillars.day.stem).toBe(chartBody.data.dayMaster);
   });
 
   it('登出后 token 失效', async () => {

@@ -29,15 +29,15 @@ async function setup() {
     headers: H,
     body: JSON.stringify({ email: 'card@x.com', password: 'password1' }),
   });
-  const { token } = (await reg.json()) as { token: string };
-  const auth = { Authorization: `Bearer ${token}`, ...H };
+  const { data: reged } = (await reg.json()) as { data: { token: string } };
+  const auth = { Authorization: `Bearer ${reged.token}`, ...H };
   // 奇门对话不需生辰（ADR-0004）。
   const convRes = await app.request('/api/conversations', {
     method: 'POST',
     headers: auth,
     body: JSON.stringify({ system: 'qimen' }),
   });
-  const conv = (await convRes.json()) as { id: string };
+  const { data: conv } = (await convRes.json()) as { data: { id: string } };
   return { db, app, auth, convId: conv.id };
 }
 
@@ -57,7 +57,9 @@ describe('消息 card 列 round-trip', () => {
 
     const res = await app.request(`/api/conversations/${convId}/messages`, { headers: auth });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<{ content: string; card?: typeof card }>;
+    const { data: body } = (await res.json()) as {
+      data: Array<{ content: string; card?: typeof card }>;
+    };
     expect(body).toHaveLength(1);
     expect(body[0]?.content).toBe('今天宜谈事。');
     expect(body[0]?.card).toEqual(card);
@@ -70,7 +72,9 @@ describe('消息 card 列 round-trip', () => {
       .run();
 
     const res = await app.request(`/api/conversations/${convId}/messages`, { headers: auth });
-    const body = (await res.json()) as Array<{ content: string; card?: unknown }>;
+    const { data: body } = (await res.json()) as {
+      data: Array<{ content: string; card?: unknown }>;
+    };
     expect(body[0]?.content).toBe('纯文本回复。');
     expect(body[0]?.card).toBeUndefined();
   });

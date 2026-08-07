@@ -1,3 +1,4 @@
+import { apiErrorBody } from '@tianji/shared';
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import type { AppDeps } from '../app';
@@ -10,8 +11,8 @@ export function chartRoutes({ db }: AppDeps) {
 
   app.get('/', (c) => {
     const row = db.select().from(baziCharts).where(eq(baziCharts.userId, c.get('userId'))).get();
-    if (!row) return c.json({ error: { code: 'not_found', message: '请先完善生辰' } }, 404);
-    return c.json(row.data);
+    if (!row) return c.json(apiErrorBody('not_found', '请先完善生辰'), 404);
+    return c.json({ data: row.data });
   });
 
   return app;

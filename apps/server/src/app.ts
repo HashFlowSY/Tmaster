@@ -1,3 +1,4 @@
+import { apiErrorBody } from '@tianji/shared';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { type AuthVariables, authMiddleware } from './auth/middleware';
@@ -53,6 +54,14 @@ export function createApp(deps: AppDeps) {
     }),
   );
   app.route('/api', api);
+
+  // 兜底：任何未捕获异常都收进统一错误信封，客户端永不收到裸崩溃响应（ADR-0008）。
+  // SSE 流处理器自捕获并发 error 事件、不抛到此处，故不受信封影响。
+  app.onError((err, c) => {
+    console.error('[unhandled]', err);
+    return c.json(apiErrorBody('internal', '服务异常，请稍后重试'), 500);
+  });
+
   return app;
 }
 

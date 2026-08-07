@@ -5,8 +5,9 @@
 // **默认**,屏幕改造时可用 <Icon strokeWidth> 覆盖。名字取语义(可 grep 原型用途反查,
 // 见每项后的「原型用途」注释,对应 spec User Story 19/34)。
 //
-// 全部为 viewBox 24×24 的线性图标:stroke=currentColor→color、fill=none;唯一例外 crown 是
-// 填充图标(fill=currentColor)。登录页品牌标记(ring-spin + 太极,viewBox 100×100)不在此表,
+// 全部为 viewBox 24×24 的线性图标:stroke=currentColor→color、fill=none;填充图标(fill=currentColor,
+// 见各项 filled:true)是例外:crown、以及收藏行用的 bookmarkFilled。登录页品牌标记(ring-spin + 太极,
+// viewBox 100×100)不在此表,
 // 因其为多色固定复合体,见 ./LoginMark。原型 .board-brand 的 .luopan 属 mock 框架,不移植
 // (spec §10 mock-frame exclusions)。
 
@@ -161,10 +162,19 @@ export const icons = {
       { kind: 'circle', cx: 12, cy: 12, r: 9 },
     ],
   },
-  // 书签 —— 我的页「我的收藏」菜单项 / 收藏列表。
+  // 书签(线性) —— 我的页「我的收藏」菜单项(原型 .mitem 内 fill=none stroke=currentColor)。
   bookmark: {
     viewBox: 24,
     strokeWidth: 1.5,
+    elements: [{ kind: 'path', d: 'M5 4h14v16l-7-4-7 4z' }],
+  },
+  // 书签(填充) —— 收藏列表行的收藏标记(原型 .cico.star 内 fill=currentColor、金亮)。
+  // 与线性 bookmark 同几何、仅着色方式不同:原型同一路径在「我的」菜单为线性、在收藏行为填充,
+  // 故拆成两个命名项(各对应原型一处渲染),而非给 Icon 加运行时 filled 覆盖(填充是注册表几何属性)。
+  bookmarkFilled: {
+    viewBox: 24,
+    strokeWidth: 1.5,
+    filled: true,
     elements: [{ kind: 'path', d: 'M5 4h14v16l-7-4-7 4z' }],
   },
   // 退出 —— 我的页「退出登录」(danger)。

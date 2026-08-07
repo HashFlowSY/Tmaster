@@ -9,10 +9,17 @@ import type { IconName } from './icons';
 // （hover→press 映射），非通用调色板 token，就地成常量并注明出处。
 const PRESSED_BG = 'rgba(233,220,190,0.025)';
 
+/**
+ * 标题变体：
+ * - `default`（历史页）——原型 .ctitle：单行省略。
+ * - `favorite`（收藏页）——原型 .favtitle：两行截断（-webkit-line-clamp:2），字号/行高/下边距不同。
+ */
+export type ListRowVariant = 'default' | 'favorite';
+
 export interface ListRowProps {
-  /** 分型图标名（原型 .cico 内线性图标，如八字=chart / 奇门=grid）；金亮着色。 */
+  /** 分型图标名（原型 .cico 内线性图标，如八字=chart / 奇门=grid；收藏行=bookmarkFilled）；金亮着色。 */
   icon: IconName;
-  /** 会话标题（原型 .ctitle）——单行省略，同时作该行无障碍名。 */
+  /** 会话标题（原型 .ctitle / .favtitle）——同时作该行无障碍名。default 单行省略、favorite 两行截断。 */
   title: string;
   /** 断语摘要（原型 .csnip）——单行省略。数据模型无预览时可省（见属主页裁定）。 */
   snippet?: string;
@@ -23,6 +30,8 @@ export interface ListRowProps {
   onPress: () => void;
   /** 行间 line-2 分隔线；末行传 false（原型 .convrow:last-child 无分隔）。默认 true。 */
   divider?: boolean;
+  /** 标题变体，默认 `default`（历史页单行）；`favorite` 走原型 .favtitle 两行截断。 */
+  variant?: ListRowVariant;
 }
 
 /**
@@ -34,8 +43,21 @@ export interface ListRowProps {
  *
  * 与我的页 MenuList 的 .mitem 刻意分开：那是「图标片+标题+尾注」的设置式菜单，本组件是
  * 「标题+断语+系统分型」的可搜索长列表行，结构不同，不复用同一形状（避免过早泛化）。
+ *
+ * 收藏页（issue 11）复用本组件的 `favorite` 变体:标题走原型 .favtitle 两行截断（收藏 = 一整条对话，
+ * 标题较长故两行；见属主页裁定），图标传 bookmarkFilled;其余结构（图标片 / meta / 分隔 / 按压）不变。
  */
-export function ListRow({ icon, title, snippet, time, tag, onPress, divider = true }: ListRowProps) {
+export function ListRow({
+  icon,
+  title,
+  snippet,
+  time,
+  tag,
+  onPress,
+  divider = true,
+  variant = 'default',
+}: ListRowProps) {
+  const favorite = variant === 'favorite';
   return (
     <Pressable
       accessibilityRole="button"
@@ -47,7 +69,7 @@ export function ListRow({ icon, title, snippet, time, tag, onPress, divider = tr
         <Icon name={icon} color={semantic.accentBright} size={18} />
       </View>
       <View style={styles.main}>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={favorite ? styles.favTitle : styles.title} numberOfLines={favorite ? 2 : 1}>
           {title}
         </Text>
         {snippet != null ? (
@@ -102,6 +124,15 @@ const styles = StyleSheet.create({
     letterSpacing: tracking(0.02, 14.5),
     color: semantic.textPrimary,
     marginBottom: 4,
+  },
+  // 原型 .favtitle（收藏行变体）：14、象牙、行高 1.55、.02em、mb6、两行截断（numberOfLines=2）。
+  favTitle: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    lineHeight: 14 * 1.55,
+    letterSpacing: tracking(0.02, 14),
+    color: semantic.textPrimary,
+    marginBottom: 6,
   },
   // 原型 .csnip：12.5、muted、行高 1.5、单行省略。
   snippet: {

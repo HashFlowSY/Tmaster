@@ -49,4 +49,24 @@ describe('ListRow', () => {
 
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it('收藏变体（两行标题）保留按钮契约：可按下、以整段标题作无障碍名', async () => {
+    const onPress = jest.fn();
+    // 收藏 = 一整条对话，标题较长会截断为两行（视觉双端人工核对）；此处只断言按钮行为不被变体破坏。
+    const title = '乙巳年事业要点：变动窗口农历三月至六月，利西北方，宜金融、科技。';
+    const { getByRole } = await render(
+      <ListRow
+        variant="favorite"
+        icon="bookmarkFilled"
+        title={title}
+        time="08-04"
+        tag="八字"
+        onPress={onPress}
+      />,
+    );
+
+    await fireEvent.press(getByRole('button', { name: title }));
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
 });

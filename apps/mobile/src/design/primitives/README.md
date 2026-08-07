@@ -17,7 +17,9 @@ issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记�
 补齐 Tier-2 对话件 `TabDrop` / `Persona` / `KvCard` / `ChatMessage` / `Composer`。issue 08(命盘页属主)
 补齐 Tier-1 `Card` 与 Tier-2 命盘件 `Pillars` / `ElementBars` / `QiMenGrid`。issue 09(我的页属主)
 补齐 Tier-2 我的页件 `StatTile` / `MenuList`。issue 10(历史对话页属主)补齐 Tier-2 列表件
-`ListRow` / `SearchBar` / `Pager`(纯搜索谓词与分页区间见 `src/list/`)。
+`ListRow` / `SearchBar` / `Pager`(纯搜索谓词与分页区间见 `src/list/`)。issue 11(我的收藏页属主)
+给 `ListRow` 增补 `favorite` 变体(两行截断标题),加 `bookmarkFilled` 填充图标,并把历史/收藏两个二级页
+逐字一致的衬线标题栏抽为 `TitleBar`。
 
 ## 组件
 
@@ -32,12 +34,13 @@ issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记�
 - **`SegmentedControl({ options, value, onChange, accessibilityLabel? })`** — Tier-1 交互 primitive(泛型 value)。ink-3 胶囊容器内等宽分段按钮,选中项 = `accentSoft` 填充 + gold-2 文字 + 金色内描边(原型 `.seg`)。按下以其 `value` 触发 `onChange`,`button` 角色 + `selected` 状态供无障碍。行为测试见 `SegmentedControl.test.tsx`。
 - **`Cascader({ crumbs, options, selected?, onSelect, onCrumbPress? })`** — Tier-2 级联选择器(生辰引导页属主)。顶部面包屑(已选级 gold-2 加粗 · 当前级象牙+金下划线,级间「/」)+ 可滚动选项列表,选中项 = gold-2 + 尾部金色 ✓(原型 `.cascader`)。按下选项以其 `value` 触发 `onSelect`,`button` 角色 + `selected` 状态供无障碍。传 `onCrumbPress` 时已选级面包屑可点(逐级下钻回上一级,当前级不可点)。行为测试见 `Cascader.test.tsx`。
 - **`Card({ children, padded?, style? })`** — Tier-1 表现型「有边框的容器面」(原型 `.chartcard`:ink-2 底 + line 描边 + r18 + padding18)。卡间距由属主页 gap 控制,不写进 Card 外边距。命盘三卡(命主/五行强弱/奇门局)属主。纯表现型,不设行为测试。
+- **`TitleBar({ title, onBack, backLabel? })`** — 二级页顶部衬线标题栏(原型 `.apphead .title-row`)。左侧 38×38 返回键(`.icon-btn`,ink-2 r11)+ 居中衬线标题(h1 就地 21→19、.1em)+ 右侧等宽占位居中标题。返回键 `button` 角色 + 无障碍名,按下走 `onBack`。历史/收藏两个二级列表页共用(结构逐字一致,仅标题不同),传入 `Screen` 的 header 槽。行为测试见 `TitleBar.test.tsx`。
 - **`Pillars({ pillars })`** — Tier-2「八字盘」四柱网格(命盘页属主;裁定 text + View,不用 SVG)。每柱 = 柱名 + 大号衬线天干/地支(**五行色由属主派生注入**)+ 十神 + 藏干;日柱金色强调。自身不引 `palette.wx*`——五行数据编码色收敛在 `src/chart/fiveElement.ts`。纯表现型。
 - **`ElementBars({ bars })`** — 命盘「五行强弱」水平条(五行名 + ink-4 轨道 + 五行色填充 + 计数)。计数与色由 `chart/fiveElement.elementBalance` 派生注入(清点四柱干支),本组件不引 `palette.wx*`。条宽映射(满格 78% / 0 桩 6%)是纯视觉编码,不写测试。纯表现型。
 - **`QiMenGrid({ cells })`** — Tier-2「奇门局」九宫格(命盘页属主;裁定 text + View,不用 SVG)。3×3、每宫 = 门(衬线)+ 星宫;中宫金软底 + 金边、值符宫金边 + 内金环(奇门用**金色**强调,不涉五行色)。RN 无 CSS grid → 按行分块、方格 flex:1 + aspectRatio:1 保证等宽正方。纯表现型。
 - **`StatTile({ items })`** — Tier-2 统计条(我的页属主)。原型 `.stats`:ink-2 底 + line 描边 + r16 的等分网格,每格 = 大号衬线数值(等宽数字)+ muted 标签,格间 line-2 竖分隔(末格无)。外边距由属主页控制。纯表现型,不设行为测试。
 - **`MenuList({ rows })`** — Tier-2 分组菜单(我的页属主)。原型 `.menu` 卡内若干 `.mitem` 行:图标方片(ink-3 r10,金亮;`danger`→danger 色)+ 标题 + 尾部说明与 ›(`danger` 行不显示尾注)。行间 line-2 分隔。按下走各行 `onPress`,`button` 角色 + label 无障碍名。行为测试见 `MenuList.test.tsx`。
-- **`ListRow({ icon, title, snippet?, time, tag, onPress, divider? })`** — Tier-2 会话列表行(历史/收藏页属主)。原型 `.convrow`:40×40 图标方片(`.cico`,ink-3 r12 + line,金亮线性图标)+ 标题(`.ctitle`)+ 可选断语(`.csnip`,均单行省略)+ 右侧竖排相对时间(`.ctime`,等宽)与系统标签胶囊(`.ctag`)。整行 `button` 角色、标题作无障碍名;`divider` 控制行间 line-2 分隔(末行传 false)。行为测试见 `ListRow.test.tsx`。
+- **`ListRow({ icon, title, snippet?, time, tag, onPress, divider?, variant? })`** — Tier-2 会话列表行(历史/收藏页属主)。原型 `.convrow`:40×40 图标方片(`.cico`,ink-3 r12 + line,金亮线性图标)+ 标题 + 可选断语(`.csnip`,单行省略)+ 右侧竖排相对时间(`.ctime`,等宽)与系统标签胶囊(`.ctag`)。整行 `button` 角色、标题作无障碍名;`divider` 控制行间 line-2 分隔(末行传 false)。`variant`:`default`(历史,`.ctitle` 单行省略)/ `favorite`(收藏,`.favtitle` 两行截断,收藏行传 `icon="bookmarkFilled"`)。行为测试见 `ListRow.test.tsx`。
 - **`SearchBar({ value, onChangeText, accessibilityLabel, placeholder?, onClear?, clearLabel? })`** — Tier-2 列表搜索框(历史/收藏页属主)。原型 `.searchbar`:ink-3 r12 行内放大镜图标 + TextInput + 清除按钮(仅有输入时显示,按下清空并回焦);聚焦金色焦点环(边框渐入 gold@50% + gold-soft 3px 环,走 Reanimated,订阅减动效,同 `Field`)。搜索谓词是纯函数(`src/list/listSearch.ts`),组件只承载输入 chrome。行为测试见 `SearchBar.test.tsx`。
 - **`Pager({ page, totalPages, onPageChange, accessibilityLabel?, prevLabel?, nextLabel? })`** — Tier-2 分页控件(历史/收藏页属主)。原型 `.pager`:居中「‹ · 页码… · ›」;页码 ink-2 r11 胶囊,选中页 gold-soft 底 + gold-2 文字 + 金边;首/末页时上/下一页禁用(opacity .3、不可按)。按页码/上下页以目标页码触发 `onPageChange`,`button` 角色 + 选中/禁用无障碍态。区间计算是纯函数(`src/list/pager.ts`),组件只渲染控件。行为测试见 `Pager.test.tsx`。
 
@@ -78,7 +81,8 @@ issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记�
 | 生辰引导 历法 / longitude | 历法(公历/农历)为展示态本地状态——`BirthProfileInput` schema 无历法字段(spec 禁改 schema),不随提交发送。longitude 由 `src/location/regions.ts` 的精选省/市/区县数据就近取真实经度(城市级挂经度、区县继承),随所选地点变化;全量地理编码仍属 spec Out of Scope。 |
 | 历史 断语摘要(`.csnip`) | `Conversation` schema 无消息预览字段,逐行拉 `messages` 属重请求且越界(spec 禁改 schema/不加功能)。`ListRow` 保留 `snippet` 槽(1:1 形状),但历史页据真实数据**省略**该行,**不编造摘要**(同我的页 VIP/断语不填占位的「不造假」取舍)。 |
 | 历史 分型图标/标签 | `Conversation.system` 仅 `'bazi'`/`'qimen'`(原型的运势/合婚等分类不在数据模型)。八字→`chart`(circle+cross)、奇门→`grid`(九宫格);标签走 `systemLabel`。 |
-| 历史 标题栏 | 原型 history 屏为衬线标题栏 + 返回键(`.apphead .title-row`,h1 就地 21→19)。故 `(app)` 布局对本页 `headerShown:false`,页内自绘标题栏(返回键复用 `.icon-btn` 38×38 r11 就地常量)——不叠原生头。收藏页仍暂用原生头,待 issue 11 同样收敛。 |
+| 历史/收藏 标题栏 | 原型两屏均为衬线标题栏 + 返回键(`.apphead .title-row`,h1 就地 21→19)。故 `(app)` 布局对两页 `headerShown:false`,页内自绘标题栏——不叠原生头。二者标题栏结构逐字一致(仅标题字不同),抽为 `TitleBar` primitive(issue 11),避免二级页标题栏分叉;这与 `MenuList`/`ListRow` 那类结构不同故不合并的裁定相反——此处两处形状完全相同,属 rule-of-two 提取而非过早泛化。 |
+| 收藏 数据边界(断语/来源/图标/文案) | 原型收藏行预设是从对话摘出的逐条断语(`.favtitle` 断语 + `.csnip`「来自「原对话」」)。但本域 收藏 = 一整条对话(CONTEXT.md),`Conversation` 仅 `{id,system,title,favorited,updatedAt}`。故 `favtitle`→对话标题(`ListRow` `favorite` 变体两行截断,标题 schema 上限 60 字)、**省略** `snippet`(无独立来源对话可标注,同历史页不编造)、收藏标记全行统一 `bookmarkFilled` 金标(分型由 `.ctag` 承载)。搜索/提示文案引用不存在的「断语」字段,按历史页先例改为据真实数据的措辞(placeholder「搜索我的收藏…」/ listhint「按时间倒序」);aria-label / 无结果文案与原型一致。 |
 | 历史 点击行 | 进入「对话」页。按对话 id 深链到具体线程需 chat 页接 route 参数(属 issue 07 页,越界),故导航到对话 tab(与既有 history 行为一致)。 |
 | 历史 分页显隐 | 仅在多于一页时渲染 `Pager`(单页时为惰性控件、无意义,故隐藏)。原型示例数据恒 3 页,未涉此真数据情形。 |
 | 历史 排序 | 按 `updatedAt` 倒序(原型「按时间倒序」),客户端排序,不依赖服务端顺序。 |

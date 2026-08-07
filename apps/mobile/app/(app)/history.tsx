@@ -1,17 +1,10 @@
 import { type Conversation, systemLabel } from '@tianji/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { ConversationApi } from '../../src/api/endpoints';
 import { relativeTime } from '../../src/chat/conversationMeta';
-import {
-  HSerif,
-  Icon,
-  ListRow,
-  Pager,
-  Screen,
-  SearchBar,
-} from '../../src/design/primitives';
+import { ListRow, Pager, Screen, SearchBar, TitleBar } from '../../src/design/primitives';
 import type { IconName } from '../../src/design/primitives';
 import { filterRows, normalizeQuery } from '../../src/list/listSearch';
 import { pageView, slicePage } from '../../src/list/pager';
@@ -94,24 +87,7 @@ export default function HistoryScreen() {
   const view = pageView(rows.length, PAGE_SIZE, page);
   const visible = searching ? filterRows(rows, query, toText) : slicePage(rows, view);
 
-  const header = (
-    <View style={styles.titleRow}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="返回"
-        onPress={() => router.back()}
-        style={styles.iconBtn}
-        hitSlop={6}
-      >
-        <Icon name="back" color={semantic.textPrimary} size={18} />
-      </Pressable>
-      <HSerif variant="head" style={styles.title} numberOfLines={1}>
-        历史对话
-      </HSerif>
-      {/* 右侧占位，令标题居中（原型 .title-row 的 width:38 spacer）。 */}
-      <View style={styles.spacer} />
-    </View>
-  );
+  const header = <TitleBar title="历史对话" onBack={() => router.back()} />;
 
   return (
     <Screen scroll header={header} contentStyle={styles.pad}>
@@ -159,38 +135,7 @@ export default function HistoryScreen() {
   );
 }
 
-// 原型 .icon-btn 圆角 11 —— 非通用 radii 档，就地成常量（同命盘分享键 / 我的设置键）。
-const ICON_BTN_RADIUS = 11;
-
 const styles = StyleSheet.create({
-  // 原型 .apphead .title-row：横排、居中、两端对齐；纵向 padding = apphead 顶 2 + title-row 6/14。
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 8,
-    paddingBottom: 14,
-  },
-  // 原型 .icon-btn：38×38 / ink-2 底 / line 描边 / r11。
-  iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: ICON_BTN_RADIUS,
-    backgroundColor: semantic.surface,
-    borderWidth: 1,
-    borderColor: semantic.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // 原型列表页 h1：衬线 19（.apphead h1 的 21 就地缩到 19）、.1em、象牙；flex 居中。
-  title: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 19,
-    letterSpacing: tracking(0.1, 19),
-  },
-  // 与左侧返回键等宽的右侧占位，保证标题真正居中（原型 spacer width:38）。
-  spacer: { width: 38 },
   // 内容区：原型 history .pad 顶 2、底 30（横向 26 由 Screen 承载）。
   pad: { paddingTop: 2, paddingBottom: 30 },
   // 原型 .conv-empty：居中、muted、13、上下留白、舒适行高。

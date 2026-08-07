@@ -39,6 +39,9 @@ export type { BottomNavProps, BottomNavItem } from './BottomNav';
 export { Card } from './Card';
 export type { CardProps } from './Card';
 
+export { TitleBar } from './TitleBar';
+export type { TitleBarProps } from './TitleBar';
+
 // Tier-2 对话页组件（issue 07）。
 export { TabDrop } from './TabDrop';
 export type { TabDropProps, TabDropItem } from './TabDrop';
@@ -74,7 +77,7 @@ export type { MenuListProps, MenuRow } from './MenuList';
 
 // Tier-2 历史/收藏页组件（issue 10）。
 export { ListRow } from './ListRow';
-export type { ListRowProps } from './ListRow';
+export type { ListRowProps, ListRowVariant } from './ListRow';
 
 export { SearchBar } from './SearchBar';
 export type { SearchBarProps } from './SearchBar';

@@ -224,6 +224,27 @@ export const icons = {
       { kind: 'circle', cx: 15, cy: 12, r: 5 },
     ],
   },
+  // 睁眼 —— 密码框「显示密码」切换(issue 02;原型无此图标,依 Field 显/隐能力新增,线宽随 mail/lock 1.6)。
+  eye: {
+    viewBox: 24,
+    strokeWidth: 1.6,
+    elements: [
+      { kind: 'path', d: 'M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z' },
+      { kind: 'circle', cx: 12, cy: 12, r: 3 },
+    ],
+  },
+  // 闭眼(带斜杠)—— 密码框「隐藏密码」切换(issue 02;同上新增)。
+  eyeOff: {
+    viewBox: 24,
+    strokeWidth: 1.6,
+    elements: [
+      {
+        kind: 'path',
+        d: 'M17.94 17.94A10.07 10.07 0 0112 20C5 20 1 12 1 12a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24',
+      },
+      { kind: 'path', d: 'M1 1l22 22' },
+    ],
+  },
 } satisfies Record<string, IconDef>;
 
 export type IconName = keyof typeof icons;

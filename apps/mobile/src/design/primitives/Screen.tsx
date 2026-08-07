@@ -1,5 +1,13 @@
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { semantic } from '../semantic';
 import { gutter } from '../spacing';
@@ -13,6 +21,11 @@ export interface ScreenProps {
   header?: ReactNode;
   /** true 时内容区可滚动(ScrollView);默认静态 View。 */
   scroll?: boolean;
+  /**
+   * true 时用 KeyboardAvoidingView 包裹,键盘弹起时内容避让(issue 02,供 auth 等表单屏)。
+   * 默认 false:不包裹、行为与现状一致(键盘避让效果交真机人工核对,不进单测)。
+   */
+  avoidKeyboard?: boolean;
   style?: StyleProp<ViewStyle>;
   /** 覆盖/追加内容区样式(静态时作用于 View,滚动时作用于 contentContainer)。 */
   contentStyle?: StyleProp<ViewStyle>;
@@ -23,7 +36,14 @@ export interface ScreenProps {
  * 用真实 OS 状态栏(由 app/_layout 的 expo-status-bar 提供),**不画假状态栏 / 刘海**
  * (spec §10 mock-frame exclusions)。安全区顶部内边距把内容顶到真状态栏之下。
  */
-export function Screen({ children, header, scroll = false, style, contentStyle }: ScreenProps) {
+export function Screen({
+  children,
+  header,
+  scroll = false,
+  avoidKeyboard = false,
+  style,
+  contentStyle,
+}: ScreenProps) {
   const content = scroll ? (
     <ScrollView
       style={styles.flex}
@@ -37,10 +57,26 @@ export function Screen({ children, header, scroll = false, style, contentStyle }
     <View style={[styles.flex, styles.content, contentStyle]}>{children}</View>
   );
 
-  return (
-    <SafeAreaView style={[styles.root, style]}>
+  const body = (
+    <>
       {header != null ? <View style={styles.header}>{header}</View> : null}
       {content}
+    </>
+  );
+
+  return (
+    <SafeAreaView style={[styles.root, style]}>
+      {avoidKeyboard ? (
+        // iOS 用 padding 避让;Android 交由系统 windowSoftInputMode(adjustResize)处理,不叠加 behavior。
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          {body}
+        </KeyboardAvoidingView>
+      ) : (
+        body
+      )}
     </SafeAreaView>
   );
 }

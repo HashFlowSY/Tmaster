@@ -54,4 +54,40 @@ describe('Field', () => {
     await fireEvent.press(getByText('忘记密码'));
     expect(onSuffixPress).toHaveBeenCalledTimes(1);
   });
+
+  // issue 02：错误态。断言错误文本被渲染出来（不断言边框色值——那是视觉，交人工核对）。
+  it('传入 error 时渲染错误文本', async () => {
+    const { getByText } = await render(
+      <Field label="邮箱" value="bad" onChangeText={() => {}} error="邮箱格式不正确" />,
+    );
+    expect(getByText('邮箱格式不正确')).toBeTruthy();
+  });
+
+  it('不传 error 时不渲染错误文本（现状不变）', async () => {
+    const { queryByText } = await render(<Field label="邮箱" value="" onChangeText={() => {}} />);
+    expect(queryByText('邮箱格式不正确')).toBeNull();
+  });
+
+  // issue 02：显/隐切换。断言点击眼睛翻转 secureTextEntry（行为，不断样式）。
+  it('secureTextEntry 字段：点击显/隐切换翻转 secureTextEntry', async () => {
+    const { getByLabelText } = await render(
+      <Field label="密码" value="s3cret12" onChangeText={() => {}} secureTextEntry />,
+    );
+
+    // 初始隐藏：input 的 secureTextEntry 为 true。
+    expect(getByLabelText('密码').props.secureTextEntry).toBe(true);
+
+    // 点「显示密码」→ 翻为可见。
+    await fireEvent.press(getByLabelText('显示密码'));
+    expect(getByLabelText('密码').props.secureTextEntry).toBe(false);
+
+    // 再点「隐藏密码」→ 翻回隐藏。
+    await fireEvent.press(getByLabelText('隐藏密码'));
+    expect(getByLabelText('密码').props.secureTextEntry).toBe(true);
+  });
+
+  it('非 secureTextEntry 字段：不渲染显/隐切换（现状不变）', async () => {
+    const { queryByLabelText } = await render(<Field label="邮箱" value="" onChangeText={() => {}} />);
+    expect(queryByLabelText('显示密码')).toBeNull();
+  });
 });

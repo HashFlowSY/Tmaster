@@ -15,7 +15,8 @@ issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记�
 自定义金色 `Checkbox`,并给 `Field` 增补 `helper` 说明文字槽。issue 05(生辰引导页属主)补齐 Tier-1
 `SegmentedControl` 与 Tier-2 级联选择器 `Cascader`。issue 06 补齐 `BottomNav`。issue 07(对话页属主)
 补齐 Tier-2 对话件 `TabDrop` / `Persona` / `KvCard` / `ChatMessage` / `Composer`。issue 08(命盘页属主)
-补齐 Tier-1 `Card` 与 Tier-2 命盘件 `Pillars` / `ElementBars` / `QiMenGrid`。
+补齐 Tier-1 `Card` 与 Tier-2 命盘件 `Pillars` / `ElementBars` / `QiMenGrid`。issue 09(我的页属主)
+补齐 Tier-2 我的页件 `StatTile` / `MenuList`。
 
 ## 组件
 
@@ -33,6 +34,8 @@ issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记�
 - **`Pillars({ pillars })`** — Tier-2「八字盘」四柱网格(命盘页属主;裁定 text + View,不用 SVG)。每柱 = 柱名 + 大号衬线天干/地支(**五行色由属主派生注入**)+ 十神 + 藏干;日柱金色强调。自身不引 `palette.wx*`——五行数据编码色收敛在 `src/chart/fiveElement.ts`。纯表现型。
 - **`ElementBars({ bars })`** — 命盘「五行强弱」水平条(五行名 + ink-4 轨道 + 五行色填充 + 计数)。计数与色由 `chart/fiveElement.elementBalance` 派生注入(清点四柱干支),本组件不引 `palette.wx*`。条宽映射(满格 78% / 0 桩 6%)是纯视觉编码,不写测试。纯表现型。
 - **`QiMenGrid({ cells })`** — Tier-2「奇门局」九宫格(命盘页属主;裁定 text + View,不用 SVG)。3×3、每宫 = 门(衬线)+ 星宫;中宫金软底 + 金边、值符宫金边 + 内金环(奇门用**金色**强调,不涉五行色)。RN 无 CSS grid → 按行分块、方格 flex:1 + aspectRatio:1 保证等宽正方。纯表现型。
+- **`StatTile({ items })`** — Tier-2 统计条(我的页属主)。原型 `.stats`:ink-2 底 + line 描边 + r16 的等分网格,每格 = 大号衬线数值(等宽数字)+ muted 标签,格间 line-2 竖分隔(末格无)。外边距由属主页控制。纯表现型,不设行为测试。
+- **`MenuList({ rows })`** — Tier-2 分组菜单(我的页属主)。原型 `.menu` 卡内若干 `.mitem` 行:图标方片(ink-3 r10,金亮;`danger`→danger 色)+ 标题 + 尾部说明与 ›(`danger` 行不显示尾注)。行间 line-2 分隔。按下走各行 `onPress`,`button` 角色 + label 无障碍名。行为测试见 `MenuList.test.tsx`。
 
 ## 显式裁定(pixel-1:1 exceptions,spec User Story 29)
 
@@ -52,6 +55,12 @@ issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记�
 | 命盘 奇门局 | 无结构化 API:奇门局按 ADR-0001 由 AI 在对话文本中实时起局,排盘计算属 spec Out of Scope。故 `chart.tsx` 以就地常量 `SAMPLE_QIMEN`(原型示例阳遁三局)演示 `QiMenGrid` 版式,标题注「示例排布」+ helper 说明实时生成,不谎称为命主今日真实局。八门/九星/九宫为奇门固定词汇,非个人结论。 |
 | 命盘 喜用神/忌神 · 身强弱 | 属命理判断(排盘/断语,spec Out of Scope);无 API 且不可由计数推断,编造会误导。故五行强弱卡**省略**该页脚,只保留真实计数条 + 「日主X」注,而非填占位值。 |
 | 命盘 大运 | 原型 chart 屏无大运块(以奇门局取代),按「1:1 对齐原型」删去旧屏的大运列表;数据仍在 `ChartApi.decadeFortunes`,未来可另起页承载。 |
+| 我的 命主抬头 | 命主 ≡ 当前 User(CONTEXT.md,以邮箱标识)。`PublicUser` 仅 `{ id, email, createdAt }`:头像字取邮箱首字母大写(原型示例是姓名首字,schema 无姓名);`.n` 姓名 = 邮箱;`.uid` = 真实账号 id(cuid2)。皆真实不编造。 |
+| 我的 VIP 徽标 | 原型 `.vip` 会员条;验收点写「if present」。`PublicUser` 无会员字段 → **恒不渲染**,不造假会员态(同命盘不填占位断语的取舍)。 |
+| 我的 统计 / 菜单尾注 | 累计提问 = 对话总数(`ConversationApi.list().length`,与原型 128 = 历史 128 段一致);收藏 = 其中 favorited 条数(同一次 list 客户端清点,免二次请求)。「我的命盘」尾注(日柱 · 命造)best-effort 取 `ChartApi`,缺生辰(404)/失败则省略只留 ›。 |
+| 我的 设置键 / 登出 | 设置(原型 `data-soon`)→ `Toast`「敬请期待」(占位反馈)。登出为可逆动作但仍以 `Alert` 二次确认(危险样式行 + 确认动作),确认后走 `useAuth().logout`,RootNav 依登录态跳登录。 |
+| `MenuList` 为何不复用 `ListRow` | 我的页 `.mitem`(图标片+标题+尾注的设置式菜单)与 历史/收藏(issue 10/11)的会话行(标题+断语+系统分型的可搜索长列表)结构不同;分作两个组件避免过早把 `ListRow` 泛化锁死成不合用的形状。 |
+| 我的 头像金环 | 原型 `.prof-avatar box-shadow:0 0 0 4px var(--gold-soft)` 是纯扩散环(非 `shadows` 通用档),就地用 `boxShadow` 字符串合成(引 `semantic.accentSoft`);离心径向渐变同命盘 AI 头像裁定,走 `react-native-svg` `RadialGradient`。 |
 | 命盘 icon-btn(分享) | `data-soon` 占位键:渲染 38×38 / ink-2 / r11 的分享键(1:1),按下走 `Alert`「敬请期待」——不真正接入分享(wiring 占位属 spec Out of Scope,仅给最小反馈)。r11 非通用 radii 档,就地成常量(同注册页返回键)。 |
 | `Button` 的 breathe 呼吸 | 原型 `@keyframes breathe` 动画的是 `box-shadow`,RN 阴影不可原生动画(spec §Effects 裁定)。改为在按钮后叠一层带峰值金辉 `boxShadow` 的辉光层,用 Reanimated 脉动其 **opacity**。基础态仍保留静态金辉。 |
 | `Field` 的焦点环 | 原型 `.input:focus-within` 同时改边框色 + 加 gold-soft 3px 环。这里边框色用 `interpolateColor` 渐变,环用一层 `boxShadow:focusRing` 叠层的 **opacity** 渐入(裁定:焦点环走 Reanimated)。测试只断言 focus **回调**,不断言环样式。 |

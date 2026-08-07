@@ -64,3 +64,10 @@ export type { ElementBarsProps, ElementBar } from './ElementBars';
 
 export { QiMenGrid } from './QiMenGrid';
 export type { QiMenGridProps, PalaceCell } from './QiMenGrid';
+
+// Tier-2 我的页组件（issue 09）。
+export { StatTile } from './StatTile';
+export type { StatTileProps, StatItem } from './StatTile';
+
+export { MenuList } from './MenuList';
+export type { MenuListProps, MenuRow } from './MenuList';

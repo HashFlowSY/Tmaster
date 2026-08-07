@@ -26,3 +26,9 @@ export type { ToastProps } from './Toast';
 
 export { Checkbox } from './Checkbox';
 export type { CheckboxProps } from './Checkbox';
+
+export { SegmentedControl } from './SegmentedControl';
+export type { SegmentedControlProps, SegmentedOption } from './SegmentedControl';
+
+export { Cascader } from './Cascader';
+export type { CascaderProps, CascaderCrumb, CascaderOption } from './Cascader';

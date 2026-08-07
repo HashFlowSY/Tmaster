@@ -4,7 +4,7 @@
 组件从这里取:
 
 ```ts
-import { Screen, Icon, Eyebrow, HSerif, Sub, TextMute, LoginMark, Button, Field, Toast, Checkbox } from '../design/primitives';
+import { Screen, Icon, Eyebrow, HSerif, Sub, TextMute, LoginMark, Button, Field, Toast, Checkbox, SegmentedControl, Cascader } from '../design/primitives';
 ```
 
 > 为何与 token 分两个 barrel:token barrel(`src/design`)是纯 TS、零组件依赖;primitive 引
@@ -12,8 +12,9 @@ import { Screen, Icon, Eyebrow, HSerif, Sub, TextMute, LoginMark, Button, Field,
 
 issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记。issue 03(登录页属主)补齐首批
 交互型 primitive:`Button` / `Field`,以及 Tier-2 的 `Toast`。issue 04(注册页属主)补齐 Tier-2
-自定义金色 `Checkbox`,并给 `Field` 增补 `helper` 说明文字槽。其余(`SegmentedControl`、`Card`、
-`BottomNav` 及 Tier-2 组件)在后续 issue 随属主页面落地。
+自定义金色 `Checkbox`,并给 `Field` 增补 `helper` 说明文字槽。issue 05(生辰引导页属主)补齐 Tier-1
+`SegmentedControl` 与 Tier-2 级联选择器 `Cascader`。其余(`Card`、`BottomNav` 及 Tier-2 组件)在后续
+issue 随属主页面落地。
 
 ## 组件
 
@@ -25,6 +26,8 @@ issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记�
 - **`Field({ label, icon?, suffix?, onSuffixPress?, helper?, onFocus?, onBlur?, ...TextInputProps })`** — 交互 primitive。标签 + 前置图标 + TextInput + 可选尾缀 + 可选 `helper` 说明文字(原型 `.field .helper`,如注册页密码建议);聚焦金色焦点环(边框渐入 + gold-soft 3px 环),focus 经回调上报。行为测试见 `Field.test.tsx`。
 - **`Toast({ message, onHide, durationMs? })`** — Tier-2 轻提示。屏底居中胶囊,淡入上移,到时回调隐藏。登录页「其他登录方式 / 忘记密码」→「敬请期待」。
 - **`Checkbox({ checked, onChange, disabled?, children?, accessibilityLabel? })`** — Tier-2 自定义金色勾选框(RN 无可样式化原生 checkbox,故自绘)。16×16 方框(勾选=金填充 + 深墨金对勾)+ 右侧标签内容;切换 `checked` 并以取反值触发 `onChange`,`checkbox` 角色/状态供无障碍。行为测试见 `Checkbox.test.tsx`。
+- **`SegmentedControl({ options, value, onChange, accessibilityLabel? })`** — Tier-1 交互 primitive(泛型 value)。ink-3 胶囊容器内等宽分段按钮,选中项 = `accentSoft` 填充 + gold-2 文字 + 金色内描边(原型 `.seg`)。按下以其 `value` 触发 `onChange`,`button` 角色 + `selected` 状态供无障碍。行为测试见 `SegmentedControl.test.tsx`。
+- **`Cascader({ crumbs, options, selected?, onSelect })`** — Tier-2 级联选择器(生辰引导页属主)。顶部面包屑(已选级 gold-2 加粗 · 当前级象牙+金下划线,级间「/」)+ 可滚动选项列表,选中项 = gold-2 + 尾部金色 ✓(原型 `.cascader`)。按下选项以其 `value` 触发 `onSelect`,`button` 角色 + `selected` 状态供无障碍。行为测试见 `Cascader.test.tsx`。
 
 ## 显式裁定(pixel-1:1 exceptions,spec User Story 29)
 
@@ -44,6 +47,10 @@ issue 02 交付表现型部分:`Screen` / `Icon` / 字体原子 + 登录标记�
 | `Field`/`Toast`/`Checkbox` 的一次性色 | `FOCUS_BORDER`(gold@55%)、`TOAST_BG`(墨@96%)、`TOAST_BORDER`(gold@40%)、primary 按钮文字与 `Checkbox` 对勾 `#241a06`(金底上的深墨金)是原型里各自场景的一次性值,非通用调色板 token,就地成常量并注明出处。 |
 | `Checkbox` 为自绘、且对勾用内联 SVG | 原型是 `<input type=checkbox accent-color:gold>` 原生控件,RN 无法样式化(spec §7 裁定),故自绘 16×16 方框:勾选=`accent` 金填充,未勾=`surfaceInput` 底 + `line` 描边。对勾无原型可移植路径(原生控件),就地用 react-native-svg 画一条标准 √,不入 `Icon` 注册表(注册表只存移植自原型的路径)。 |
 | `LoginHero` 的三处动效 | 星野 twinkle(整层 opacity)、罗盘 spin(仅 `MarkRing` 旋转,太极静止)、辉光 breathe(SVG `RadialGradient` 的 opacity 脉动)。三者均订阅「减少动态效果」→ 静止(spec User Story 15)。`LoginHero` 是登录屏专属复合件(单屏消费),置于 `src/components/`,不入 DS primitive。 |
+| `SegmentedControl` 选中项内描边 | 原型 `.seg button[aria-pressed]` 的 `box-shadow:inset 0 0 0 1px rgba(201,162,74,.35)`。落到 `shadows.segRing`(inset boxShadow 字符串,新架构支持);选中态无动画过渡(原型 transition 属装饰,视觉双端人工核对)。button 内圆角 9 非通用 radii 档,就地成常量。 |
+| `Cascader` 选中标记 ✓ | 原型 `.opt.sel::after content:"✓"`。伪元素无 RN 等价,就地渲染金色 `✓` Text;并给选项 `Pressable` 显式 `accessibilityLabel`,避免 ✓ 污染无障碍名。末项去掉下分隔线(原型末项分隔线被容器 `overflow:hidden` 裁掉,观感等价)。 |
+| 生辰引导 年/月/日/时辰 picker | 原型这些 `.picker` 是**静态展示格**(无实际选择交互);真实滚轮选择需 datetime 依赖(超出 spec「final four」)且非 spec 列出的 primitive。故以原型默认值播种为展示格渲染,交互式日期选择留待后续 ticket。见 `app/onboarding.tsx` 文末 RULINGS。 |
+| 生辰引导 历法 / longitude | 历法(公历/农历)为展示态本地状态——`BirthProfileInput` schema 无历法字段(spec 禁改 schema),不随提交发送。longitude 取所选城市代表经度(精确地理编码属 spec Out of Scope),桥接真太阳时校正所需的必填经度。 |
 
 ## 测试
 

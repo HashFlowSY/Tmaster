@@ -5,7 +5,7 @@ description: 把 docs/ui/tianji-app-design.html 原型 1:1 落到 Expo/RN 的设
 
 # 天机移动端设计系统 Spec
 
-Status: ready-for-agent
+Status: ready-for-human（代码全部完成；保持此状态直至维护者开始 P1 真机人工验证）
 
 > 相关决策:[ADR-0005 原生 StyleSheet + token,不引入样式库](../../docs/adr/0005-native-stylesheet-design-tokens.md) · [ADR-0006 设计系统自持字体](../../docs/adr/0006-design-system-owns-type-bundled-fonts.md) · 参考原型 `docs/ui/tianji-app-design.html`
 
@@ -58,7 +58,7 @@ Status: ready-for-agent
 ## Implementation Decisions
 
 ### Foundation & module shape
-- Native RN `StyleSheet` + a **typed token module** in the mobile app's source (`src/theme/`); **no styling library** (ADR-0005). The token module is plain TS, `tsc`-checked, zero runtime cost.
+- Native RN `StyleSheet` + a **typed token module** in the mobile app's source (`src/design/`); **no styling library** (ADR-0005). The token module is plain TS, `tsc`-checked, zero runtime cost.
 - The existing flat `theme.ts` and `ui.tsx` are **replaced** by this module and the new primitives.
 - Tokens are **two-layer**: (1) **palette primitives** named 1:1 with the prototype CSS `--vars`; (2) a **semantic alias** layer consumed by component code.
 
@@ -182,4 +182,4 @@ wxJin #d9c9a3  wxMu #6f9a6a  wxShui #5a7fa3  wxHuo #b2564a  wxTu #b0894f
   - RN 新架构 iOS Fabric CJK 输入法合成缺陷 #56463(影响中文输入,非静态显示)。
   - `boxShadow` 在 Android 新架构上尚新,需逐屏核对。
   - 生辰页原生 spinner 作为 iOS≡Android 一致性的例外(input chrome)。
-- **P4 可选尾巴(非风险,cosmetic):** token 模块目录 `src/design/` 未按 issue 01 裁定在 contract 后改名回 `src/theme/`——纯命名,零功能影响,可做可不做。
+- **命名已定(原 P4 尾巴,已闭合):** token 模块目录定为 `src/design/`,ADR-0005 已认定为最终位置;原 issue 01「contract 后改名回 `src/theme/`」的可选项**作废**,不改名。

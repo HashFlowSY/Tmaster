@@ -1,6 +1,6 @@
 # 移动端设计系统:原生 StyleSheet + 类型化 token,不引入样式库
 
-以 React Native 原生 `StyleSheet` 加一个类型化的 token 模块(`apps/mobile/src/theme/`)承载设计系统,**不引入** NativeWind / Tamagui / Unistyles 等样式库。原型 `docs/ui/tianji-app-design.html` 的写法能 1:1 映射到 `StyleSheet`,现有代码已是这一形态,token 以纯 TS 对象表达,保留日后迁移空间。
+以 React Native 原生 `StyleSheet` 加一个类型化的 token 模块(`apps/mobile/src/design/`)承载设计系统,**不引入** NativeWind / Tamagui / Unistyles 等样式库。原型 `docs/ui/tianji-app-design.html` 的写法能 1:1 映射到 `StyleSheet`,现有代码已是这一形态,token 以纯 TS 对象表达,保留日后迁移空间。
 
 ## Considered Options
 

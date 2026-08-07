@@ -13,6 +13,6 @@
 - [x] 旧扁平 theme.ts 未改动、仍编译（共存）。
 - [x] 纯逻辑测试 seam（jest-expo）覆盖 tracking/lineHeightFor/resolveDuration 且绿；`@testing-library/react-native` 测试台就位并运行。
 
-> 命名裁定：token 模块落在 `src/design/`（非 spec 直书的 `src/theme/`），因 `theme.ts` 文件会遮蔽同名目录、与共存要求冲突；contract 步（issue 12）删 `theme.ts` 后可改名。见 `apps/mobile/src/design/tokens.md`。
+> 命名裁定：token 模块最终定于 `src/design/`（ADR-0005 已认定为最终位置，不改名）。当初未用 spec 初稿的 `src/theme/`，是因 `theme.ts` 会遮蔽同名目录、与共存冲突；contract 删 `theme.ts` 后本可改名，但已决定保留 `src/design/`。见 `apps/mobile/src/design/tokens.md`。
 
 _Ref: spec §2–§6; ADR-0005 (no styling library), ADR-0006 (bundled fonts)._

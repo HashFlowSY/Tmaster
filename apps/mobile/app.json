@@ -28,7 +28,8 @@
             "./assets/fonts/NotoSansSC-SemiBold.otf"
           ]
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": false

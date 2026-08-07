@@ -30,6 +30,11 @@ export interface CascaderProps {
   selected?: string;
   /** 按下某个选项时以其 value 触发。 */
   onSelect: (value: string) => void;
+  /**
+   * 按下**已选级**面包屑时以其索引触发,用于逐级下钻的「回上一级」（当前级 `current` 面包屑不可点）。
+   * 省略时面包屑为静态展示（原型的静态面包屑行为）。
+   */
+  onCrumbPress?: (index: number) => void;
 }
 
 /**
@@ -38,17 +43,36 @@ export interface CascaderProps {
  * 下方可滚动选项列表，选中项 = gold-2 文字 + 尾部金色 ✓（原型 .opt.sel::after）。按下选项以其 value 触发
  * onSelect，button 角色 + selected 状态供无障碍与测试断言——由 Cascader.test 覆盖（只断言行为与选中态，
  * 不断言 ✓ / 颜色样式，spec Testing Decisions）。
+ * 逐级下钻场景可传 onCrumbPress:已选级面包屑变为可点,回退到该级重新选择（当前级 current 面包屑不可点）。
  */
-export function Cascader({ crumbs, options, selected, onSelect }: CascaderProps) {
+export function Cascader({ crumbs, options, selected, onSelect, onCrumbPress }: CascaderProps) {
   return (
     <View style={styles.cascader}>
       <View style={styles.crumbs}>
-        {crumbs.map((crumb, i) => (
-          <Fragment key={`${crumb.label}-${i}`}>
-            {i > 0 ? <Text style={styles.sep}>/</Text> : null}
+        {crumbs.map((crumb, i) => {
+          // 已选级(非 current)在提供 onCrumbPress 时可点,用于回上一级下钻。
+          const pressable = onCrumbPress != null && !crumb.current;
+          const text = (
             <Text style={crumb.current ? styles.crumbCurrent : styles.crumbChosen}>{crumb.label}</Text>
-          </Fragment>
-        ))}
+          );
+          return (
+            <Fragment key={`${crumb.label}-${i}`}>
+              {i > 0 ? <Text style={styles.sep}>/</Text> : null}
+              {pressable ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={crumb.label}
+                  onPress={() => onCrumbPress(i)}
+                  hitSlop={6}
+                >
+                  {text}
+                </Pressable>
+              ) : (
+                text
+              )}
+            </Fragment>
+          );
+        })}
       </View>
       <ScrollView style={styles.opts} showsVerticalScrollIndicator={false} nestedScrollEnabled>
         {options.map((opt, i) => {

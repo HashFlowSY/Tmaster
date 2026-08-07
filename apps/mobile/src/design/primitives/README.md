@@ -27,7 +27,7 @@ issue 随属主页面落地。
 - **`Toast({ message, onHide, durationMs? })`** — Tier-2 轻提示。屏底居中胶囊,淡入上移,到时回调隐藏。登录页「其他登录方式 / 忘记密码」→「敬请期待」。
 - **`Checkbox({ checked, onChange, disabled?, children?, accessibilityLabel? })`** — Tier-2 自定义金色勾选框(RN 无可样式化原生 checkbox,故自绘)。16×16 方框(勾选=金填充 + 深墨金对勾)+ 右侧标签内容;切换 `checked` 并以取反值触发 `onChange`,`checkbox` 角色/状态供无障碍。行为测试见 `Checkbox.test.tsx`。
 - **`SegmentedControl({ options, value, onChange, accessibilityLabel? })`** — Tier-1 交互 primitive(泛型 value)。ink-3 胶囊容器内等宽分段按钮,选中项 = `accentSoft` 填充 + gold-2 文字 + 金色内描边(原型 `.seg`)。按下以其 `value` 触发 `onChange`,`button` 角色 + `selected` 状态供无障碍。行为测试见 `SegmentedControl.test.tsx`。
-- **`Cascader({ crumbs, options, selected?, onSelect })`** — Tier-2 级联选择器(生辰引导页属主)。顶部面包屑(已选级 gold-2 加粗 · 当前级象牙+金下划线,级间「/」)+ 可滚动选项列表,选中项 = gold-2 + 尾部金色 ✓(原型 `.cascader`)。按下选项以其 `value` 触发 `onSelect`,`button` 角色 + `selected` 状态供无障碍。行为测试见 `Cascader.test.tsx`。
+- **`Cascader({ crumbs, options, selected?, onSelect, onCrumbPress? })`** — Tier-2 级联选择器(生辰引导页属主)。顶部面包屑(已选级 gold-2 加粗 · 当前级象牙+金下划线,级间「/」)+ 可滚动选项列表,选中项 = gold-2 + 尾部金色 ✓(原型 `.cascader`)。按下选项以其 `value` 触发 `onSelect`,`button` 角色 + `selected` 状态供无障碍。传 `onCrumbPress` 时已选级面包屑可点(逐级下钻回上一级,当前级不可点)。行为测试见 `Cascader.test.tsx`。
 
 ## 显式裁定(pixel-1:1 exceptions,spec User Story 29)
 
@@ -49,8 +49,8 @@ issue 随属主页面落地。
 | `LoginHero` 的三处动效 | 星野 twinkle(整层 opacity)、罗盘 spin(仅 `MarkRing` 旋转,太极静止)、辉光 breathe(SVG `RadialGradient` 的 opacity 脉动)。三者均订阅「减少动态效果」→ 静止(spec User Story 15)。`LoginHero` 是登录屏专属复合件(单屏消费),置于 `src/components/`,不入 DS primitive。 |
 | `SegmentedControl` 选中项内描边 | 原型 `.seg button[aria-pressed]` 的 `box-shadow:inset 0 0 0 1px rgba(201,162,74,.35)`。落到 `shadows.segRing`(inset boxShadow 字符串,新架构支持);选中态无动画过渡(原型 transition 属装饰,视觉双端人工核对)。button 内圆角 9 非通用 radii 档,就地成常量。 |
 | `Cascader` 选中标记 ✓ | 原型 `.opt.sel::after content:"✓"`。伪元素无 RN 等价,就地渲染金色 `✓` Text;并给选项 `Pressable` 显式 `accessibilityLabel`,避免 ✓ 污染无障碍名。末项去掉下分隔线(原型末项分隔线被容器 `overflow:hidden` 裁掉,观感等价)。 |
-| 生辰引导 年/月/日/时辰 picker | 原型这些 `.picker` 是**静态展示格**(无实际选择交互);真实滚轮选择需 datetime 依赖(超出 spec「final four」)且非 spec 列出的 primitive。故以原型默认值播种为展示格渲染,交互式日期选择留待后续 ticket。见 `app/onboarding.tsx` 文末 RULINGS。 |
-| 生辰引导 历法 / longitude | 历法(公历/农历)为展示态本地状态——`BirthProfileInput` schema 无历法字段(spec 禁改 schema),不随提交发送。longitude 取所选城市代表经度(精确地理编码属 spec Out of Scope),桥接真太阳时校正所需的必填经度。 |
+| 生辰引导 年/月/日/时辰 picker | 采用原生 `@react-native-community/datetimepicker`(display=spinner)采集真实出生时刻——瞬态系统选择器视作原生输入 chrome(同键盘 / 真 OS 状态栏),其两端外观差异可接受;持久引导屏仍严格 1:1。iOS 内嵌暗色底部弹层,Android 走系统对话框。时辰名由 `src/time/hourBranch.ts` 从精确 HH:mm 派生展示。见 `app/onboarding.tsx` 文末 RULINGS。 |
+| 生辰引导 历法 / longitude | 历法(公历/农历)为展示态本地状态——`BirthProfileInput` schema 无历法字段(spec 禁改 schema),不随提交发送。longitude 由 `src/location/regions.ts` 的精选省/市/区县数据就近取真实经度(城市级挂经度、区县继承),随所选地点变化;全量地理编码仍属 spec Out of Scope。 |
 
 ## 测试
 

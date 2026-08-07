@@ -1,7 +1,8 @@
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import type { Gender } from '@tianji/shared';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../src/api/client';
 import { BirthApi } from '../src/api/endpoints';
 import { radii } from '../src/design/radii';
@@ -18,16 +19,19 @@ import {
   SegmentedControl,
   Sub,
 } from '../src/design/primitives';
+import { hourBranchFromTime } from '../src/time/hourBranch';
+import { viewForPath } from '../src/location/regions';
 
 /**
  * 生辰引导页 —— 与原型 docs/ui/tianji-app-design.html 的 onboarding 屏 1:1（spec §8、issue 05）。
  * 结构:返回头 + 步骤条 + 眉标/衬线标题/副文 + 性别·历法 SegmentedControl + 年月日/时辰 picker +
  * 「时辰未知」Checkbox（复用 issue 04）+ 出生地 Cascader + helper + 「生 成 命 盘」主按钮。
  *
- * 命主录入出生信息后调用真实 BirthApi.save 起盘,成功进入 /chart（沿用旧页的提交与跳转契约）。
- * 时辰未知勾选后 birthTime 置 null,走领域的「降级盘（三柱）」路径（issue note;CONTEXT §出生信息）。
+ * 交互:年月日/时辰点开滚轮选择器采集真实出生时刻;出生地在 Cascader 里逐级下钻(省→市→区县),
+ * 并据所选地点取真实经度。命主录入后调用真实 BirthApi.save 起盘,成功进入 /chart(沿用旧页提交与跳转契约)。
+ * 时辰未知勾选后 birthTime 置 null,走领域的「降级盘(三柱)」路径(issue note;CONTEXT §出生信息)。
  *
- * 关于 picker 与 longitude 的裁定见文末 RULINGS。
+ * 关于滚轮选择器为原生控件、历法展示态的裁定见文末 RULINGS。
  */
 
 const GENDER_OPTIONS = [
@@ -41,45 +45,50 @@ const CALENDAR_OPTIONS = [
 ] as const;
 type Calendar = (typeof CALENDAR_OPTIONS)[number]['value'];
 
-// 出生日期与时辰 —— 原型静态展示值（1994/02/14 · 寅时 03:00–05:00）。
-// picker 目前为展示态（见文末 RULINGS：无 datetime 依赖、无 picker primitive 在本 issue 范围内），
-// 以原型默认值播种,保证提交出的 BirthProfileInput 合法。
-const BIRTH_YEAR = '1994';
-const BIRTH_MONTH = '02';
-const BIRTH_DAY = '14';
-const HOUR_BRANCH = '寅时';
-const HOUR_RANGE = '03:00 – 05:00';
-const BIRTH_TIME = '03:00'; // 寅时起点,提交用
+// 出生地初值 —— 与原型一致默认 浙江省/杭州市/西湖区(区县 ✓ 已选)。
+const DEFAULT_PATH = ['浙江省', '杭州市', '西湖区'];
+// 出生时刻初值 —— 原型静态展示的 1994-02-14 寅时(03:00);月份 0 基,1 = 二月。
+const makeDefaultMoment = () => new Date(1994, 1, 14, 3, 0, 0, 0);
 
-// 出生地 —— 原型固定省/市（浙江省/杭州市）+ 区县列表。longitude 取杭州代表值供真太阳时校正
-// （精确经度需地理编码,超出本 issue 范围,见文末 RULINGS）。
-const HANGZHOU_LONGITUDE = 120.15;
-const DISTRICTS = [
-  { label: '西湖区', value: '西湖区' },
-  { label: '上城区', value: '上城区' },
-  { label: '拱墅区', value: '拱墅区' },
-  { label: '滨江区', value: '滨江区' },
-  { label: '余杭区', value: '余杭区' },
-  { label: '萧山区', value: '萧山区' },
-] as const;
+// 底部弹层遮罩(原型无此态——picker 为原生输入 chrome);半透明黑,一次性值,非通用调色板 token。
+const SHEET_SCRIM = 'rgba(0,0,0,0.5)';
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const toBirthDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const toBirthTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
 export default function Onboarding() {
   const router = useRouter();
   const [gender, setGender] = useState<Gender>('male');
   const [calendar, setCalendar] = useState<Calendar>('solar');
+  const [moment, setMoment] = useState<Date>(makeDefaultMoment);
   const [timeUnknown, setTimeUnknown] = useState(false);
-  const [district, setDistrict] = useState<string>('西湖区');
+  const [path, setPath] = useState<string[]>(DEFAULT_PATH);
+  const [picker, setPicker] = useState<'date' | 'time' | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const loc = viewForPath(path);
+  const hour = hourBranchFromTime(toBirthTime(moment));
+
+  // Cascader 选项:非叶子 → 下钻;叶子 → 定为选中(viewForPath 会据新 path 给出完成态)。
+  const onSelectRegion = (value: string) => setPath([...path.slice(0, loc.complete ? -1 : undefined), value]);
+  const onCrumbPress = (index: number) => setPath(path.slice(0, index));
+
+  const canSubmit = loc.complete && loc.longitude != null && !busy;
+
   const onSubmit = async () => {
+    if (loc.longitude == null) {
+      Alert.alert('请先选择出生地点（精确到区县）');
+      return;
+    }
     setBusy(true);
     try {
       await BirthApi.save({
-        birthDate: `${BIRTH_YEAR}-${BIRTH_MONTH}-${BIRTH_DAY}`,
-        birthTime: timeUnknown ? null : BIRTH_TIME,
+        birthDate: toBirthDate(moment),
+        birthTime: timeUnknown ? null : toBirthTime(moment),
         timeUnknown,
-        birthplace: `浙江省杭州市${district}`,
-        longitude: HANGZHOU_LONGITUDE,
+        birthplace: loc.birthplace,
+        longitude: loc.longitude,
         gender,
       });
       router.replace('/chart');
@@ -134,7 +143,7 @@ export default function Onboarding() {
         />
       </View>
 
-      {/* 历法(公历/农历)—— 展示态本地状态;出生信息 schema 不含历法字段,不随提交发送。 */}
+      {/* 历法(公历/农历)—— 展示态本地状态;出生信息 schema 不含历法字段,不随提交发送(见 RULINGS)。 */}
       <View style={styles.field}>
         <Text style={styles.label}>历法</Text>
         <SegmentedControl
@@ -149,16 +158,27 @@ export default function Onboarding() {
       <View style={styles.field}>
         <Text style={styles.label}>出生日期与时辰</Text>
         <View style={styles.grid3}>
-          <PickerTile k="年" v={BIRTH_YEAR} />
-          <PickerTile k="月" v={BIRTH_MONTH} />
-          <PickerTile k="日" v={BIRTH_DAY} />
+          <PickerTile k="年" v={String(moment.getFullYear())} onPress={() => setPicker('date')} />
+          <PickerTile k="月" v={pad(moment.getMonth() + 1)} onPress={() => setPicker('date')} />
+          <PickerTile k="日" v={pad(moment.getDate())} onPress={() => setPicker('date')} />
         </View>
-        <View style={[styles.picker, styles.pickerRow]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="选择时辰"
+          disabled={timeUnknown}
+          onPress={() => setPicker('time')}
+          style={[styles.picker, styles.pickerRow, timeUnknown && styles.pickerDisabled]}
+        >
           <Text style={styles.pickerK}>时辰</Text>
-          <Text style={styles.pickerV}>
-            {HOUR_BRANCH} <Text style={styles.pickerVSmall}>{HOUR_RANGE}</Text>
-          </Text>
-        </View>
+          {timeUnknown ? (
+            <Text style={styles.pickerV}>未知</Text>
+          ) : (
+            // 原型 .picker .v：时辰名 + 小字时钟区间「寅时 03:00 – 05:00」；提交仍存所选精确 HH:mm。
+            <Text style={styles.pickerV}>
+              {hour.name} <Text style={styles.pickerVSmall}>{hour.range}</Text>
+            </Text>
+          )}
+        </Pressable>
         <View style={styles.unknown}>
           <Checkbox
             checked={timeUnknown}
@@ -176,14 +196,11 @@ export default function Onboarding() {
           出生地点 <Text style={styles.labelFaint}>· 精确到区县</Text>
         </Text>
         <Cascader
-          crumbs={[
-            { label: '浙江省' },
-            { label: '杭州市' },
-            { label: district || '选择区县', current: true },
-          ]}
-          options={DISTRICTS}
-          selected={district}
-          onSelect={setDistrict}
+          crumbs={loc.crumbs}
+          options={loc.options}
+          selected={loc.selected}
+          onSelect={onSelectRegion}
+          onCrumbPress={onCrumbPress}
         />
         <Text style={styles.helper}>
           出生地用于换算「真太阳时」，校正后的时辰更贴合本地天象。
@@ -191,21 +208,91 @@ export default function Onboarding() {
       </View>
 
       <View style={styles.submit}>
-        <Button variant="primary" disabled={busy} onPress={onSubmit}>
+        <Button variant="primary" disabled={!canSubmit} onPress={onSubmit}>
           {busy ? '起 盘 中…' : '生 成 命 盘'}
         </Button>
       </View>
+
+      <DobSpinner
+        mode={picker}
+        value={moment}
+        onChange={setMoment}
+        onClose={() => setPicker(null)}
+      />
     </Screen>
   );
 }
 
-/** 年/月/日 picker 小格(原型 .picker,竖排 k/v)。 */
-function PickerTile({ k, v }: { k: string; v: string }) {
+/** 年/月/日 picker 小格(原型 .picker,竖排 k/v),点开日期滚轮。 */
+function PickerTile({ k, v, onPress }: { k: string; v: string; onPress: () => void }) {
   return (
-    <View style={styles.picker}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`选择${k}`}
+      onPress={onPress}
+      style={styles.picker}
+    >
       <Text style={styles.pickerK}>{k}</Text>
       <Text style={styles.pickerV}>{v}</Text>
-    </View>
+    </Pressable>
+  );
+}
+
+/**
+ * 出生时刻滚轮选择器。RN 原生 DateTimePicker(display=spinner):iOS 内嵌进暗色底部弹层 + 确定;
+ * Android 走系统对话框(无法嵌入自定义容器)。改动只改所选时刻的日期部分或时间部分,另一半保持不变。
+ */
+function DobSpinner({
+  mode,
+  value,
+  onChange,
+  onClose,
+}: {
+  mode: 'date' | 'time' | null;
+  value: Date;
+  onChange: (d: Date) => void;
+  onClose: () => void;
+}) {
+  if (mode == null) return null;
+
+  const apply = (event: DateTimePickerEvent, picked?: Date) => {
+    // Android 选完即关(对话框);iOS 内嵌,保持打开由确定/背景关闭。
+    if (Platform.OS !== 'ios') onClose();
+    if (event.type === 'dismissed' || picked == null) return;
+    const next = new Date(value);
+    if (mode === 'date') next.setFullYear(picked.getFullYear(), picked.getMonth(), picked.getDate());
+    else next.setHours(picked.getHours(), picked.getMinutes(), 0, 0);
+    onChange(next);
+  };
+
+  const spinner = (
+    <DateTimePicker
+      value={value}
+      mode={mode}
+      display="spinner"
+      onChange={apply}
+      themeVariant="dark"
+      textColor={semantic.textPrimary}
+      accentColor={semantic.accent}
+      is24Hour
+    />
+  );
+
+  if (Platform.OS !== 'ios') return spinner;
+
+  return (
+    <Modal transparent visible animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.sheetBackdrop} onPress={onClose} />
+      <View style={styles.sheet}>
+        <View style={styles.sheetHead}>
+          <Text style={styles.sheetTitle}>{mode === 'date' ? '选择出生日期' : '选择出生时辰'}</Text>
+          <Pressable accessibilityRole="button" onPress={onClose} hitSlop={8}>
+            <Text style={styles.sheetDone}>确定</Text>
+          </Pressable>
+        </View>
+        {spinner}
+      </View>
+    </Modal>
   );
 }
 
@@ -257,6 +344,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     gap: 3,
   },
+  pickerDisabled: { opacity: 0.5 },
   // 时辰整行:横排两端对齐,上 10（原型内联 margin-top:10;flex-direction:row;space-between）。
   pickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
   // 原型 .picker .k：11 / muted / .06em。
@@ -288,14 +376,49 @@ const styles = StyleSheet.create({
 
   // 主按钮:原型 margin-top:8。
   submit: { marginTop: 8 },
+
+  // iOS 滚轮底部弹层(暗色,原型无此态——picker 为原生输入 chrome,见 RULINGS)。
+  sheetBackdrop: { flex: 1, backgroundColor: SHEET_SCRIM },
+  sheet: {
+    backgroundColor: semantic.surface,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    borderTopWidth: 1,
+    borderColor: semantic.border,
+    paddingBottom: 24,
+  },
+  sheetHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: semantic.borderFaint,
+  },
+  sheetTitle: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    letterSpacing: tracking(0.04, 14),
+    color: semantic.textSecondary,
+  },
+  sheetDone: {
+    fontFamily: fonts.sansMedium,
+    fontSize: 15,
+    letterSpacing: tracking(0.04, 15),
+    color: semantic.accentBright,
+  },
 });
 
 // ============ RULINGS(pixel-1:1 exceptions,spec User Story 29)============
 //
-// · 年/月/日/时辰 picker 为展示态:原型这些 .picker 是静态展示格(无实际选择交互),
-//   且真实滚轮选择需 datetime 依赖——超出 spec「final four」依赖决策,亦非 spec Tier-1/Tier-2
-//   列出的 primitive。故以原型默认值播种为展示格,交互式日期选择留待后续 ticket。
-// · longitude 取杭州代表值(120.15):真太阳时校正需要经度,但区县→精确经度需地理编码,
-//   属 spec Out of Scope（命理计算 / 无新依赖）。以城市代表经度桥接,保证提交合法。
-// · 历法(公历/农历)为展示态本地状态:BirthProfileInput schema 不含历法字段(spec 禁止改 schema),
-//   故仅渲染 SegmentedControl,不随提交发送。
+// · 年月日/时辰滚轮为**原生输入 chrome**:采用 @react-native-community/datetimepicker(display=spinner)。
+//   spec 的 1:1 判据是「iOS≡Android 渲染一致」,针对的是被设计的**屏幕表面**;瞬态的系统选择器与键盘、
+//   真机状态栏同属原生输入 chrome(spec 本就用真 OS 状态栏),其两端外观差异可接受。持久的引导屏(picker 小格、
+//   分段控件、Cascader)仍严格 1:1。iOS 内嵌进暗色底部弹层统一观感,Android 走系统对话框。
+// · 时辰展示为「时辰名 + 精确 HH:mm」:领域按精确墙钟时间存 birthTime(真太阳时校正据此定时柱,
+//   CONTEXT §真太阳时),时辰名由 hourBranchFromTime 从时间派生,仅作阅读辅助。
+// · 出生地经度取所选地点就近经度(见 src/location/regions.ts):精选省/市/区县子集,城市级挂真实经度、
+//   区县就近继承;非全国穷举,可扩充。全量地理编码超出 spec Out of Scope,但经度已随所选地点真实变化。
+// · 历法(公历/农历)为展示态本地状态:BirthProfileInput schema 不含历法字段(spec 禁改 schema),
+//   故仅渲染 SegmentedControl,不随提交发送;农历→公历 换算属日历计算,超出本 issue 范围。

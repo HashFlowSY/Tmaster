@@ -45,4 +45,38 @@ describe('Cascader', () => {
     expect(getByText('浙江省')).toBeTruthy();
     expect(getByText('杭州市')).toBeTruthy();
   });
+
+  it('提供 onCrumbPress 时，按下已选级面包屑以其索引触发（回上一级）', async () => {
+    const onCrumbPress = jest.fn();
+    const { getByRole } = await render(
+      <Cascader
+        crumbs={[
+          { label: '浙江省' },
+          { label: '杭州市' },
+          { label: '选择区县', current: true },
+        ]}
+        options={OPTIONS}
+        onSelect={() => {}}
+        onCrumbPress={onCrumbPress}
+      />,
+    );
+
+    await fireEvent.press(getByRole('button', { name: '杭州市' }));
+
+    expect(onCrumbPress).toHaveBeenCalledWith(1);
+  });
+
+  it('当前级（current）面包屑不可点', async () => {
+    const onCrumbPress = jest.fn();
+    const { queryByRole } = await render(
+      <Cascader
+        crumbs={[{ label: '浙江省' }, { label: '选择城市', current: true }]}
+        options={OPTIONS}
+        onSelect={() => {}}
+        onCrumbPress={onCrumbPress}
+      />,
+    );
+
+    expect(queryByRole('button', { name: '选择城市' })).toBeNull();
+  });
 });

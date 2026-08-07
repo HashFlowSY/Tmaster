@@ -12,5 +12,8 @@
     "lint": "pnpm -r lint",
     "server": "pnpm --filter @tianji/server dev",
     "mobile": "pnpm --filter @tianji/mobile start"
+  },
+  "dependencies": {
+    "eas-cli": "^21.6.0"
   }
 }

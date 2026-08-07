@@ -7,6 +7,7 @@ packages:
 # 需其安装脚本链接预编译二进制，否则 `pnpm install` 会以 ERR_PNPM_IGNORED_BUILDS 退出（连带 `expo lint` 失败）。
 allowBuilds:
   better-sqlite3: true
+  dtrace-provider: false
   esbuild: true
   unrs-resolver: true
 

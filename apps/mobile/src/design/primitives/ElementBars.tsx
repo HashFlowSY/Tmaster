@@ -1,5 +1,4 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { radii } from '../radii';
 import { semantic } from '../semantic';
 import { fonts, tabularNums } from '../typography';
 

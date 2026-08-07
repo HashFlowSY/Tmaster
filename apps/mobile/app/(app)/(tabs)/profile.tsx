@@ -14,6 +14,7 @@ import {
   StatTile,
   Toast,
 } from '../../../src/design/primitives';
+import { palette } from '../../../src/design/palette';
 import { radii } from '../../../src/design/radii';
 import { semantic } from '../../../src/design/semantic';
 import { fonts, tabularNums, tracking } from '../../../src/design/typography';
@@ -175,8 +176,9 @@ export default function ProfileScreen() {
 // 头像离心径向渐变（原型 .prof-avatar radial circle at 38% 32% #2c3242→#12151e）——头像专用一次性色
 // （#12151e 恰为 ink-2,但此处按原型渐变字面量就地成常量,不经语义层）。金环 = gold-soft 4px 描边环。
 const AVATAR_SIZE = 66;
+// eslint-disable-next-line no-restricted-syntax -- 头像径向高光：原型 .prof-avatar 内联字面量（非 :root token），纯装饰
 const AVATAR_INNER = '#2c3242';
-const AVATAR_OUTER = '#12151e';
+const AVATAR_OUTER = palette.ink2; // = #12151e（原型 .prof-avatar 外缘恰为 ink-2）
 const AVATAR_RING = `0px 0px 0px 4px ${semantic.accentSoft}`; // 原型 box-shadow:0 0 0 4px var(--gold-soft)
 
 /** 命主头像：离心径向渐变圆 + 金描边 + 金软外环 + 中心衬线首字（原型 .prof-avatar，radial→svg RadialGradient）。 */

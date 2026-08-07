@@ -3,9 +3,12 @@ packages:
   - 'packages/*'
 
 # 允许原生模块运行构建脚本（pnpm v11.9）。better-sqlite3 用 node-api 预编译，esbuild 需其安装脚本。
+# unrs-resolver：eslint-config-expo 的 import 解析器（eslint-import-resolver-typescript）依赖的 napi 原生解析器，
+# 需其安装脚本链接预编译二进制，否则 `pnpm install` 会以 ERR_PNPM_IGNORED_BUILDS 退出（连带 `expo lint` 失败）。
 allowBuilds:
   better-sqlite3: true
   esbuild: true
+  unrs-resolver: true
 
 minimumReleaseAgeExclude:
   - '@expo/cli@57.0.13'

@@ -2,7 +2,7 @@ import { Fragment } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { radii } from '../radii';
 import { semantic } from '../semantic';
-import { fonts, tracking } from '../typography';
+import { fonts } from '../typography';
 
 // 选项列表最大高度（原型 .cascader .opts max-height:184）——超出滚动。
 const OPTS_MAX_HEIGHT = 184;

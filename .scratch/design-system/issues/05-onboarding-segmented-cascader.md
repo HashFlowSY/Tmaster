@@ -4,7 +4,7 @@
 
 **Blocked by:** 04.
 
-**Status:** done (commit c2a5946 + 17d71b5) — 视觉 1:1 双端真机核对 = P1 风险项（暂缓，不阻塞）
+**Status:** done (commit c2a5946 + 17d71b5) — 视觉 1:1 双端真机已人工验证通过 ✓（2026-08-07）
 
 - [x] `SegmentedControl` renders options, marks the selected with `accentSoft` fill + inset ring, and calls `onChange` with the chosen option; behavior covered by a component test.
 - [x] `Cascader` shows the 省/市/区县 breadcrumb + option list with the ✓ selected marker.

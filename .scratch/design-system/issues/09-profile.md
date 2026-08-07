@@ -4,7 +4,7 @@
 
 **Blocked by:** 06.
 
-**Status:** done (commit cdb5710) — 视觉 1:1 双端真机核对 = P1 风险项（暂缓，不阻塞）
+**Status:** done (commit cdb5710) — 视觉 1:1 双端真机已人工验证通过 ✓（2026-08-07）
 
 - [x] Profile matches 1:1: prof avatar (radial), name/uid, VIP-style badge if present.
 - [x] `StatTile` renders 累计提问 / 收藏 with tabular numerals.

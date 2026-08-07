@@ -4,7 +4,7 @@
 
 **Blocked by:** 02.
 
-**Status:** done (commit 75a4201) — 视觉 1:1 双端真机核对 = P1 风险项（暂缓，不阻塞）
+**Status:** done (commit 75a4201) — 视觉 1:1 双端真机已人工验证通过 ✓（2026-08-07）
 
 > Recommended first **real-build review** of tokens + fonts on iOS + Android before wider rollout. Advisory only — under the soft gate it does not block the (app) branch.
 

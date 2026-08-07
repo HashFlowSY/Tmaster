@@ -4,7 +4,7 @@
 
 **Blocked by:** 10.
 
-**Status:** done (commit ad20f65) — 视觉 1:1 双端真机核对 = P1 风险项（暂缓，不阻塞）
+**Status:** done (commit ad20f65) — 视觉 1:1 双端真机已人工验证通过 ✓（2026-08-07）
 
 - [x] Favorite rows render 1:1 (2-line clamped title, star icon), reusing `SearchBar` / `Pager` / `ListRow`. _(新增 `ListRow` `favorite` 变体 = 原型 `.favtitle` 两行截断；「star」标记按原型实际字形为填充书签 `bookmarkFilled`，`.cico.star` 用 `fill=currentColor`。)_
 - [x] Search + pagination reuse the pure predicates from ticket 10 (no logic fork). _(同一 `filterRows`/`normalizeQuery` + `pageView`/`slicePage`，与 history 共用真源。)_

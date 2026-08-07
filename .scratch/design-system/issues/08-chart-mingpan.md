@@ -4,7 +4,7 @@
 
 **Blocked by:** 06.
 
-**Status:** done (commit d3b21bc) — 视觉 1:1 双端真机核对 = P1 风险项（暂缓，不阻塞）
+**Status:** done (commit d3b21bc) — 视觉 1:1 双端真机已人工验证通过 ✓（2026-08-07）
 
 - [x] Chart card matches 1:1: 命主 meta, four 柱 with 五行-colored 干支, 十神, 藏干.
 - [x] Five-element balance bars render with the correct data-encoding colors.

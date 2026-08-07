@@ -4,7 +4,7 @@
 
 **Blocked by:** 03.
 
-**Status:** done (commit 9290ae1) — 视觉 1:1 双端真机核对 = P1 风险项（暂缓，不阻塞）
+**Status:** done (commit 9290ae1) — 视觉 1:1 双端真机已人工验证通过 ✓（2026-08-07）
 
 - [x] Custom `Checkbox` toggles `checked` and fires `onChange` (RN has no styleable native checkbox); behavior covered by a component test.
 - [x] Register matches the prototype 1:1: back nav, heading/sub, three fields (helper text on password), consent checkbox + links, primary button, 直接登录 link.

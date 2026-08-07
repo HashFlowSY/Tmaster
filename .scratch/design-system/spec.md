@@ -5,7 +5,7 @@ description: 把 docs/ui/tianji-app-design.html 原型 1:1 落到 Expo/RN 的设
 
 # 天机移动端设计系统 Spec
 
-Status: ready-for-human（代码全部完成；保持此状态直至维护者开始 P1 真机人工验证）
+Status: done（代码 + P1 真机双端视觉 1:1 人工验证均已通过，2026-08-07）
 
 > 相关决策:[ADR-0005 原生 StyleSheet + token,不引入样式库](../../docs/adr/0005-native-stylesheet-design-tokens.md) · [ADR-0006 设计系统自持字体](../../docs/adr/0006-design-system-owns-type-bundled-fonts.md) · 参考原型 `docs/ui/tianji-app-design.html`
 
@@ -175,11 +175,8 @@ wxJin #d9c9a3  wxMu #6f9a6a  wxShui #5a7fa3  wxHuo #b2564a  wxTu #b0894f
 - **Dev build required** for the embedded fonts (not Expo Go).
 - After approval, split the migration into `.scratch/design-system/issues/NN-*.md` tickets per `docs/agents/issue-tracker.md`.
 
-## Risks（风险 — 暂缓验证）
+## Risks（风险）
 
-- **P1 —— 视觉 1:1 未经真机验证（headline risk，暂时接受，不在此验证）。** 12 张工单代码均已完成、committed、`pnpm -r lint` / `typecheck` / 128 测试全绿;但 spec 的 1:1 判据要求 **iOS + Android dev build 双端人工核对**——字体渲染、`boxShadow` 焦点环/阴影、金渐变、登录星野光点的实心近似、原生 `datetimepicker` chrome。本环境无法出原生 dev build,故 **P1 暂列为已知风险**;维护者在 `pnpm --filter @tianji/mobile ios`（或 `android`）dev build 上确认后,方可把各屏视觉验收视为真正闭环。下列细项均归入此风险:
-  - Noto Serif ≠ Apple Songti 的字形差异(见上「1:1 caveat」)。
-  - RN 新架构 iOS Fabric CJK 输入法合成缺陷 #56463(影响中文输入,非静态显示)。
-  - `boxShadow` 在 Android 新架构上尚新,需逐屏核对。
-  - 生辰页原生 spinner 作为 iOS≡Android 一致性的例外(input chrome)。
+- **P1 —— 视觉 1:1 双端真机核对：已人工验证通过 ✓（2026-08-07）。** 维护者在 iOS + Android dev build 上核对字体渲染、`boxShadow` 焦点环/阴影、金渐变、登录星野光点、原生 `datetimepicker` chrome,视觉验收全部闭环。字形差(Noto ≠ Songti)、`boxShadow`-Android、生辰页原生 spinner 例外均已确认可接受。
+- **仍存的运行时风险(与视觉无关,未关闭):** RN 新架构 iOS Fabric CJK 输入法合成缺陷 #56463——影响对话 composer / 搜索的中文**输入**,非静态显示;待上游修复或规避。
 - **命名已定(原 P4 尾巴,已闭合):** token 模块目录定为 `src/design/`,ADR-0005 已认定为最终位置;原 issue 01「contract 后改名回 `src/theme/`」的可选项**作废**,不改名。

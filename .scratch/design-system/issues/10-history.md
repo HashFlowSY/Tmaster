@@ -4,7 +4,7 @@
 
 **Blocked by:** 06.
 
-**Status:** done (commit 938f5ac) — 视觉 1:1 双端真机核对 = P1 风险项（暂缓，不阻塞）
+**Status:** done (commit 938f5ac) — 视觉 1:1 双端真机已人工验证通过 ✓（2026-08-07）
 
 - [x] `ListRow` renders 对话 rows 1:1 (icon, title, snippet, time, system tag). _(primitive supports snippet 1:1; screen omits it — Conversation schema has no preview field, ruling documented per Out-of-Scope「no schema changes」+ issue 09 precedent.)_
 - [x] `SearchBar` filters rows across all pages (client-side), shows a clear button, hides the pager while searching, and shows a no-result state; the **search predicate is a pure function with unit tests** (`src/list/listSearch.ts` + `.test.ts`).

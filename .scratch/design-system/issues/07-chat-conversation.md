@@ -4,7 +4,7 @@
 
 **Blocked by:** 06.
 
-**Status:** done (commit c57e08a + 89e0d73) — 视觉 1:1 双端真机核对 = P1 风险项（暂缓，不阻塞）
+**Status:** done (commit c57e08a + 89e0d73) — 视觉 1:1 双端真机已人工验证通过 ✓（2026-08-07）
 
 - [x] `TabDrop` conversation switcher shows the current 对话 label + a recent list, opens/closes with caret rotation, and switches the shown thread.
 - [x] Chat bubbles match 1:1: persona header, me (gold-gradient tint) vs AI bubbles, embedded kv cards, `msgin` entrance (reduce-motion aware).

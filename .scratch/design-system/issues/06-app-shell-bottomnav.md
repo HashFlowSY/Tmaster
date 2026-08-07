@@ -4,7 +4,7 @@
 
 **Blocked by:** 02.
 
-**Status:** done (commit 7477856) — 视觉待真机核对(P1)
+**Status:** done (commit 7477856) — 视觉真机核对已通过 ✓（2026-08-07）
 
 > Branches off core primitives (02) in parallel with the auth screens (soft gate) — does not wait on the login review.
 

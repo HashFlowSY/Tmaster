@@ -4,7 +4,7 @@
 
 **Blocked by:** 01.
 
-**Status:** done — 见 `apps/mobile/src/design/primitives/`（Screen/Icon/字体原子/LoginMark + Icon.test）。typecheck 绿、全量测试绿。视觉忠实度待 dev build(含字体二进制,issue 01 人工步)于登录检查点人工核对。
+**Status:** done — 见 `apps/mobile/src/design/primitives/`（Screen/Icon/字体原子/LoginMark + Icon.test）。typecheck 绿、全量测试绿。视觉忠实度已在 dev build 人工核对通过 ✓（2026-08-07）。
 
 - [x] `Screen` renders content within safe-area insets over the `bg` token, with content-vs-header horizontal padding per spec, and **no fake status bar / notch**。(`Screen.tsx`:SafeAreaView + `semantic.bg` + `gutter.content=26`/`header=22`;不画假状态栏,用 `app/_layout` 的真 OS 状态栏。)
 - [x] `Icon` renders each of the ~22 prototype icons + the login mark from ported SVG paths; `color` / `size` props work; a component test asserts it renders。(`icons.ts` 注册 22 个线性图标 + `LoginMark.tsx` 登录标记;`Icon` 收 `color`/`size`/`strokeWidth`/`accessibilityLabel`;`Icon.test.tsx` 断言全量渲染 + LoginMark 渲染。)

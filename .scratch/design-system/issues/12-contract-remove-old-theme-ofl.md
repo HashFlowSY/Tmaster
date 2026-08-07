@@ -4,7 +4,7 @@
 
 **Blocked by:** 04, 05, 07, 08, 09, 11 (every migrated screen — transitively covers 03, 06, 10).
 
-**Status:** done (commit a60ee6a) — native dev build 属 P1 人工步
+**Status:** done (commit a60ee6a) — native dev build 已人工验证通过 ✓（2026-08-07）
 
 - [x] The old flat `theme.ts` / `ui.tsx` / `components/ConversationList.tsx` (and any remaining imports) are removed; no screen references them; `tsc` green。(已 grep 验证零残留 import;iOS/Android 原生构建 = P1 真机步)
 - [x] The bundled fonts' **OFL license text** ships in an in-app credits / licenses screen (per ADR-0006)。(`app/(app)/licenses.tsx` + `src/legal/FontLicenseText`,从「我的」进入)

@@ -4,7 +4,7 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** done — 代码基座（c977866）+ 子集化字体内嵌（2634ee8）+ ESLint 接入（da7435f）。dev build 真机编译/无闪烁 = **P1 风险项（暂缓，不验证）**。
+**Status:** done — 代码基座（c977866）+ 子集化字体内嵌（2634ee8）+ ESLint 接入（da7435f）。dev build 真机编译/无闪烁 = **已人工验证通过 ✓（2026-08-07）**。
 
 - [x] `react-native-svg`, `expo-linear-gradient`, `react-native-reanimated`(4), `expo-font` installed。**字体已放入,`app.json` 4 条路径指向存在的 `.ttf`,prebuild 不再因缺字体报错**;实际 iOS/Android dev build 编译属人工真机步骤。
 - [x] Noto Serif SC (Regular) + Noto Sans SC (Regular/Medium/SemiBold) **已子集化内嵌**(Google Fonts 可变字体经 `_src/instance.py` 实例化 + name 表改名为 stem 双端可解析;再 pyftsubset 子集到 GB2312 全量 6763 汉字 + ASCII/CJK 标点,**四文件合计 9.2 MB**,commit 2634ee8)。dev build 无闪烁待真机确认(P1)。

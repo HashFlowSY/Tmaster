@@ -46,7 +46,7 @@ export function Icon({
       height={size}
       viewBox={`0 0 ${def.viewBox} ${def.viewBox}`}
       fill="none"
-      accessible={accessibilityLabel != null}
+      accessible={accessibilityLabel != null ? true : undefined}
       accessibilityRole={accessibilityLabel != null ? 'image' : undefined}
       accessibilityLabel={accessibilityLabel}
     >

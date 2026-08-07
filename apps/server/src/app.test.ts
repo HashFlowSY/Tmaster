@@ -33,6 +33,33 @@ async function register(app: ReturnType<typeof createApp>, email: string) {
 }
 
 describe('集成：认证与对话网关', () => {
+  it('允许本地 Web 前端跨域调用 API', async () => {
+    const app = makeApp();
+    const res = await app.request('/api/auth/register', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'http://localhost:8081',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type,authorization',
+      },
+    });
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:8081');
+    expect(res.headers.get('Access-Control-Allow-Methods')).toContain('POST');
+    expect(res.headers.get('Access-Control-Allow-Headers')).toContain('Content-Type');
+    expect(res.headers.get('Access-Control-Allow-Headers')).toContain('Authorization');
+
+    const blocked = await app.request('/api/auth/register', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://example.com',
+        'Access-Control-Request-Method': 'POST',
+      },
+    });
+    expect(blocked.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  });
+
   it('注册返回 token 与用户', async () => {
     const app = makeApp();
     const { res } = await register(app, 'a@b.com');

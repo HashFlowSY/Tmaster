@@ -12,6 +12,8 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(workspaceRoot, 'node_modules'),
 ];
-config.resolver.disableHierarchicalLookup = true;
+// 保留分层查找：pnpm 的传递依赖位于虚拟 store 的包级 node_modules 中。
+// 若关闭，Metro 只能看到上面的两个顶层目录，会把已安装的 Expo 运行时依赖误报为缺失。
+config.resolver.disableHierarchicalLookup = false;
 
 module.exports = config;

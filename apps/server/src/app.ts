@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { type AuthVariables, authMiddleware } from './auth/middleware';
 import type { Db } from './db/client';
 import type { Env } from './env';
@@ -15,6 +16,8 @@ export interface AppDeps {
 }
 
 type GuardedApp = Hono<{ Variables: AuthVariables }>;
+
+const WEB_ORIGINS = ['http://localhost:8081', 'http://127.0.0.1:8081'];
 
 /**
  * 组装 Hono 应用。依赖显式注入（db/env），便于测试用内存库拉起整应用。
@@ -41,6 +44,14 @@ export function createApp(deps: AppDeps) {
 
   const app = new Hono();
   app.get('/health', (c) => c.json({ ok: true }));
+  app.use(
+    '/api/*',
+    cors({
+      origin: WEB_ORIGINS,
+      allowMethods: ['GET', 'POST', 'PUT', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'Authorization'],
+    }),
+  );
   app.route('/api', api);
   return app;
 }

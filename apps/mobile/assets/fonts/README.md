@@ -33,5 +33,13 @@
 
 ## 许可(OFL)
 
-Noto 系列为 SIL OFL 1.1,可免费商用内嵌。见 [`OFL.txt`](./OFL.txt) —— 需把随源字体附带的
-**完整 OFL 1.1 原文 + Noto 版权/保留字体名声明**逐字拷入(不可改写),并在 App「开源许可/致谢」页展示。
+Noto 系列为 SIL OFL 1.1,可免费商用内嵌。[`OFL.txt`](./OFL.txt) 已填入 **OFL 1.1 官方原文 +
+Noto CJK 上游(Adobe Source Han)版权与保留字体名声明**(issue 12)。该文件随字体二进制一起重分发
+(OFL 条款 2:许可须随 Font Software 分发)。
+
+App「开源许可 / 致谢」页(`app/(app)/licenses.tsx`,从「我的」进入)就地展示同一份原文——其真源是
+`src/legal/fontLicense.ts` 的 `FONT_LICENSE` 常量(RN/Metro 不能 import `.txt`,故另存一份)。两份由
+`src/legal/fontLicense.test.ts` 断言**逐字一致**;改其一必须同步改另一。
+
+> 若从**其他分发源**(如 Google Fonts)取字体,请以该源附带的 OFL 原文覆盖 `OFL.txt` 与
+> `FONT_LICENSE` 两处(版权行/保留字体名可能不同),测试会守住二者同步。

@@ -1,4 +1,14 @@
-Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source Han Sans'.
+// 打包字体（Noto Serif SC / Noto Sans SC，ADR-0006）的 SIL Open Font License 1.1 全文，
+// 供 App「开源许可 / 致谢」页（app/(app)/licenses.tsx）就地展示（spec User Story 33）。
+//
+// 为什么在 TS 里再放一份：RN/Metro 不支持把 `.txt` 直接 import 成字符串，运行期读 asset
+// 需要异步 + expo-asset，得不偿失。故此常量是「App 内展示」的真源，而 assets/fonts/OFL.txt
+// 是随字体二进制一起重分发的独立许可文件（OFL 条款 2 要求许可随 Font Software 分发）。
+// 两份必须逐字一致，由 fontLicense.test.ts 断言防漂移——改其一必须同步改另一。
+//
+// 正文为 SIL OFL 1.1 官方原文 + Noto CJK 上游（Adobe Source Han）版权与保留字体名声明，
+// 逐字拷贝、不得改写或摘编。若维护者从其他分发源取字体，请以该源附带的 OFL 覆盖两处。
+export const FONT_LICENSE = `Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source Han Sans'.
 Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source Han Serif'.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
@@ -91,3 +101,4 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
+`;

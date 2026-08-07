@@ -103,6 +103,13 @@ export default function ProfileScreen() {
       onPress: () => router.push('/favorites'),
     },
   ];
+  // 关于组:开源许可 / 字体致谢（issue 12 / ADR-0006）——展示内嵌字体的 OFL 原文,合规必需的入口。
+  const licenseRow: MenuRow = {
+    key: 'licenses',
+    icon: 'more',
+    label: '开源许可 · 字体致谢',
+    onPress: () => router.push('/licenses'),
+  };
   const logoutRow: MenuRow = {
     key: 'logout',
     icon: 'logout',
@@ -151,9 +158,12 @@ export default function ProfileScreen() {
         />
       </View>
 
-      {/* 导航菜单 + 危险登出（两组 .menu，间距 16）。 */}
+      {/* 导航菜单 + 关于（许可）+ 危险登出（三组 .menu，间距 16）。 */}
       <View style={styles.navWrap}>
         <MenuList rows={navRows} />
+      </View>
+      <View style={styles.navWrap}>
+        <MenuList rows={[licenseRow]} />
       </View>
       <MenuList rows={[logoutRow]} />
 

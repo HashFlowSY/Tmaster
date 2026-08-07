@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/auth/AuthContext';
-import { theme } from '../src/theme';
+import { semantic } from '../src/design/semantic';
 
 function RootNav() {
   const { ready, authenticated } = useAuth();
@@ -22,7 +22,7 @@ function RootNav() {
 
   return (
     <Stack
-      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.bg } }}
+      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: semantic.bg } }}
     />
   );
 }

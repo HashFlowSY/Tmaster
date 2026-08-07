@@ -4,8 +4,8 @@
 # 前置：
 #   - pip install fonttools brotli
 #   - 把四个全量源字体放到 apps/mobile/assets/fonts/_src/，文件名与目标一致：
-#       NotoSerifSC-Regular.otf  NotoSansSC-Regular.otf
-#       NotoSansSC-Medium.otf    NotoSansSC-SemiBold.otf
+#       NotoSerifSC-Regular.ttf  NotoSansSC-Regular.ttf
+#       NotoSansSC-Medium.ttf    NotoSansSC-SemiBold.ttf
 #   - 常用汉字表 apps/mobile/assets/fonts/_src/hanzi.txt（纯文本，约 4000 常用字，
 #     如《通用规范汉字表》一级字表 ~3500 + 二级补充或项目实际用字）
 #
@@ -31,10 +31,10 @@ fi
 UNICODES="U+0020-007E,U+00A0-00FF,U+2000-206F,U+3000-303F,U+FF00-FFEF,U+FE30-FE4F"
 
 FILES=(
-  "NotoSerifSC-Regular.otf"
-  "NotoSansSC-Regular.otf"
-  "NotoSansSC-Medium.otf"
-  "NotoSansSC-SemiBold.otf"
+  "NotoSerifSC-Regular.ttf"
+  "NotoSansSC-Regular.ttf"
+  "NotoSansSC-Medium.ttf"
+  "NotoSansSC-SemiBold.ttf"
 )
 
 for f in "${FILES[@]}"; do

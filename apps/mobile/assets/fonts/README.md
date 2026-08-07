@@ -7,29 +7,39 @@
 
 | 文件名 | 字族 | 字重 | 代码里的 fontFamily |
 |---|---|---|---|
-| `NotoSerifSC-Regular.otf` | Noto Serif SC | Regular (400) | `NotoSerifSC-Regular` |
-| `NotoSansSC-Regular.otf` | Noto Sans SC | Regular (400) | `NotoSansSC-Regular` |
-| `NotoSansSC-Medium.otf` | Noto Sans SC | Medium (500) | `NotoSansSC-Medium` |
-| `NotoSansSC-SemiBold.otf` | Noto Sans SC | SemiBold (600) | `NotoSansSC-SemiBold` |
+| `NotoSerifSC-Regular.ttf` | Noto Serif SC | Regular (400) | `NotoSerifSC-Regular` |
+| `NotoSansSC-Regular.ttf` | Noto Sans SC | Regular (400) | `NotoSansSC-Regular` |
+| `NotoSansSC-Medium.ttf` | Noto Sans SC | Medium (500) | `NotoSansSC-Medium` |
+| `NotoSansSC-SemiBold.ttf` | Noto Sans SC | SemiBold (600) | `NotoSansSC-SemiBold` |
 
-- 格式 **必须是 TTF/OTF**（Android 内嵌不吃 woff2）。
-- 每个文件需**子集化**到 ~4,000 常用汉字 + ASCII + CJK 标点,单权重约 1.5–3 MB,四个合计约 6–10 MB。
-- 未放入这四个文件前,`expo prebuild` / dev build 会因找不到字体而报错——这是预期的,补齐即可。
+- 格式 **必须是 TTF/OTF**（Android 内嵌不吃 woff2）。本仓用 TTF。
+- 每个文件的 **family / PostScript name 已改名为与文件名 stem 一致**（如 `NotoSansSC-SemiBold`），
+  这样 `fontFamily: "NotoSansSC-SemiBold"` 在 iOS（按 PS/family 名解析）与 Android（按内嵌文件名解析）双端都能命中；
+  否则三个 Sans 权重会共用同一 PS 名 `NotoSansSC-Regular` 而在 iOS 冲突。
 
-## 生成步骤（需联网 + Python,一次性)
+## 现状与生成方法
 
-1. 取源字体(全量 OTF/TTF静态字重):
-   - Noto Serif SC / Noto Sans SC 的官方分发在 `notofonts/noto-cjk`(GitHub)与 Google Fonts。
-   - 需要 Serif 的 Regular,Sans 的 Regular / Medium / SemiBold 四个静态权重。
-   - 放到 `assets/fonts/_src/`(此目录被 git 忽略,见下)。
-2. 准备常用汉字表 `assets/fonts/_src/hanzi.txt`(如《通用规范汉字表》一级字表 ~3500 字,纯文本、无分隔)。
-3. 安装子集化工具:`pip install fonttools brotli`。
-4. 运行:`pnpm --filter @tianji/mobile fonts:subset`(即 `scripts/build-fonts.sh`)。
-   脚本把 `_src/` 里的四个源文件子集化并输出到本目录的四个目标文件名。
-5. 出 dev build:`pnpm --filter @tianji/mobile ios`(或 `android`)。**Expo Go 不支持内嵌字体,必须 dev build。**
+**已放入四个全量静态权重（本仓已提交，约 44 MB：Serif 14 MB + Sans 3×10 MB）**，dev build 不再因缺字体报错。
+它们由本目录 `_src/instance.py` 从 Google Fonts 的**可变字体**实例化而来（`google/fonts` 的
+`NotoSansSC[wght].ttf` / `NotoSerifSC[wght].ttf` → `wght=400/500/600` 实例 + 改名 name 表）。
+`_src/`（可变源 + 脚本）被 git 忽略。
 
-> 为什么不自动下载:取字体与子集化需要联网与本地 Python 工具链,属维护者的一次性人工步骤;
-> `build-fonts.sh` 负责其中可自动化的子集化环节。
+复现（需联网 + `pip install fonttools`）:
+```
+cd assets/fonts/_src
+curl -L -o NotoSansSC-VF.ttf  "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf"
+curl -L -o NotoSerifSC-VF.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/notoserifsc/NotoSerifSC%5Bwght%5D.ttf"
+python3 instance.py   # 输出四个 .ttf 到 assets/fonts/
+```
+
+出 dev build:`pnpm --filter @tianji/mobile ios`(或 `android`)。**Expo Go 不支持内嵌字体,必须 dev build。**
+
+## 待办:子集化(体积优化,非阻塞)
+
+当前是**全量**字体(~44 MB),尚未子集化——功能可用但包体偏大。目标是子集到 ~4,000 常用汉字 + ASCII + CJK 标点,
+四个合计约 6–10 MB(spec §Fonts、ADR-0006)。做法:准备 `_src/hanzi.txt`(如《通用规范汉字表》一级字 ~3500),
+把四个全量静态权重放到 `_src/`,`pip install fonttools brotli`,再 `pnpm --filter @tianji/mobile fonts:subset`
+(即 `scripts/build-fonts.sh`,已指向 `.ttf` 目标名),子集产物覆盖本目录四个文件。
 
 ## 许可(OFL)
 

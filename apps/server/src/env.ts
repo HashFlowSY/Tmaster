@@ -21,6 +21,26 @@ const EnvSchema = z.object({
     .int()
     .positive()
     .default(6 * 60 * 60 * 1000),
+
+  // ---- auth 限流（内存滑动窗口，见 ADR-0008 / spec G）----
+  // 阈值与窗口经 env 可调，避免开发/测试期把自己锁死（调大即可放行）。默认对应 spec：
+  // 登录每 IP 10 分钟 10 次、注册每 IP 每小时 5 次，超出即 429 rate_limited。
+  /** 登录窗口内允许的最大请求数（按 IP）。 */
+  LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  /** 登录滑动窗口长度（毫秒），默认 10 分钟。 */
+  LOGIN_RATE_LIMIT_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(10 * 60 * 1000),
+  /** 注册窗口内允许的最大请求数（按 IP）。 */
+  REGISTER_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  /** 注册滑动窗口长度（毫秒），默认 1 小时。 */
+  REGISTER_RATE_LIMIT_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60 * 60 * 1000),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

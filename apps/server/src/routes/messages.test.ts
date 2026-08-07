@@ -16,6 +16,10 @@ const env: Env = {
   DB_PATH: ':memory:',
   PORT: 8787,
   SESSION_IDLE_MS: 6 * 60 * 60 * 1000,
+  LOGIN_RATE_LIMIT_MAX: 10,
+  LOGIN_RATE_LIMIT_WINDOW_MS: 10 * 60 * 1000,
+  REGISTER_RATE_LIMIT_MAX: 5,
+  REGISTER_RATE_LIMIT_WINDOW_MS: 60 * 60 * 1000,
 };
 
 const H = { 'Content-Type': 'application/json' };

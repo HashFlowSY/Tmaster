@@ -12,14 +12,18 @@ const env: Env = {
   DB_PATH: ':memory:',
   PORT: 8787,
   SESSION_IDLE_MS: 6 * 60 * 60 * 1000,
+  LOGIN_RATE_LIMIT_MAX: 10,
+  LOGIN_RATE_LIMIT_WINDOW_MS: 10 * 60 * 1000,
+  REGISTER_RATE_LIMIT_MAX: 5,
+  REGISTER_RATE_LIMIT_WINDOW_MS: 60 * 60 * 1000,
 };
 
 const H = { 'Content-Type': 'application/json' };
 
-function makeApp() {
+function makeApp(envOverrides: Partial<Env> = {}) {
   const { db } = createDb(':memory:');
   applyMigrations(db);
-  return createApp({ db, env });
+  return createApp({ db, env: { ...env, ...envOverrides } });
 }
 
 async function register(app: ReturnType<typeof createApp>, email: string) {
@@ -194,5 +198,63 @@ describe('集成：认证与对话网关', () => {
     const out = await app.request('/api/account/logout', { method: 'POST', headers: auth });
     expect(out.status).toBe(200);
     expect((await app.request('/api/account/me', { headers: auth })).status).toBe(401);
+  });
+});
+
+describe('集成：auth 限流', () => {
+  // 测试用 x-forwarded-for 模拟不同来源 IP：app.request() 无真实 socket，
+  // getConnInfo 取不到地址时限流器回退到该头（生产走真实 socket，不读此头）。
+  const from = (ip: string) => ({ ...H, 'x-forwarded-for': ip });
+
+  const login = (app: ReturnType<typeof createApp>, ip: string, email = 'rl@x.com') =>
+    app.request('/api/auth/login', {
+      method: 'POST',
+      headers: from(ip),
+      body: JSON.stringify({ email, password: 'password1' }),
+    });
+
+  const doRegister = (app: ReturnType<typeof createApp>, ip: string, email: string) =>
+    app.request('/api/auth/register', {
+      method: 'POST',
+      headers: from(ip),
+      body: JSON.stringify({ email, password: 'password1' }),
+    });
+
+  it('登录在窗口内超阈值 → 429 rate_limited 信封；未超阈值不受影响', async () => {
+    const app = makeApp({ LOGIN_RATE_LIMIT_MAX: 2, LOGIN_RATE_LIMIT_WINDOW_MS: 60_000 });
+    await register(app, 'rl@x.com');
+
+    // 阈值内的正常登录不被误伤（凭证正确 → 200）。
+    expect((await login(app, '1.1.1.1')).status).toBe(200);
+    expect((await login(app, '1.1.1.1')).status).toBe(200);
+
+    // 第 3 次超阈值 → 429 统一信封。
+    const blocked = await login(app, '1.1.1.1');
+    expect(blocked.status).toBe(429);
+    const body = (await blocked.json()) as {
+      error: { code: string; message: string };
+      data?: unknown;
+    };
+    expect(body.error.code).toBe('rate_limited');
+    expect(typeof body.error.message).toBe('string');
+    expect(body.data).toBeUndefined(); // 成功与错误互斥
+
+    // 另一 IP 独立计数、不被株连。
+    expect((await login(app, '2.2.2.2')).status).toBe(200);
+  });
+
+  it('注册按 IP 超阈值 → 429 rate_limited', async () => {
+    const app = makeApp({ REGISTER_RATE_LIMIT_MAX: 2, REGISTER_RATE_LIMIT_WINDOW_MS: 60_000 });
+
+    expect((await doRegister(app, '9.9.9.9', 'a1@x.com')).status).toBe(201);
+    expect((await doRegister(app, '9.9.9.9', 'a2@x.com')).status).toBe(201);
+
+    const blocked = await doRegister(app, '9.9.9.9', 'a3@x.com');
+    expect(blocked.status).toBe(429);
+    const body = (await blocked.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('rate_limited');
+
+    // 另一 IP 不受影响。
+    expect((await doRegister(app, '8.8.8.8', 'b1@x.com')).status).toBe(201);
   });
 });

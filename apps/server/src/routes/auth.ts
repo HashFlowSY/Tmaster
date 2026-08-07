@@ -7,6 +7,7 @@ import { signToken } from '../auth/jwt';
 import { hashPassword, verifyPassword } from '../auth/password';
 import { createSession } from '../auth/session';
 import { type UserRow, users } from '../db/schema';
+import { slidingWindowRateLimit } from '../http/rateLimit';
 import { zJson } from '../http/validate';
 
 function toAuthResponse(user: UserRow, token: string): AuthResponse {
@@ -20,7 +21,19 @@ function toAuthResponse(user: UserRow, token: string): AuthResponse {
 export function authRoutes({ db, env }: AppDeps) {
   const app = new Hono();
 
-  app.post('/register', zJson(RegisterInputSchema), async (c) => {
+  // 内存滑窗限流，挡暴力破解与批量注册（spec G）。登录与注册各自独立计数、
+  // 独立阈值/窗口，经 env 可调（调大即可在开发/压测期放行）。限流器在校验之前跑，
+  // 超阈值请求直接 429、不触达业务逻辑。
+  const loginLimiter = slidingWindowRateLimit({
+    max: env.LOGIN_RATE_LIMIT_MAX,
+    windowMs: env.LOGIN_RATE_LIMIT_WINDOW_MS,
+  });
+  const registerLimiter = slidingWindowRateLimit({
+    max: env.REGISTER_RATE_LIMIT_MAX,
+    windowMs: env.REGISTER_RATE_LIMIT_WINDOW_MS,
+  });
+
+  app.post('/register', registerLimiter, zJson(RegisterInputSchema), async (c) => {
     const { email, password } = c.req.valid('json');
     const existing = db.select().from(users).where(eq(users.email, email)).get();
     if (existing) {
@@ -36,7 +49,7 @@ export function authRoutes({ db, env }: AppDeps) {
     return c.json({ data: toAuthResponse(user, token) }, 201);
   });
 
-  app.post('/login', zJson(LoginInputSchema), async (c) => {
+  app.post('/login', loginLimiter, zJson(LoginInputSchema), async (c) => {
     const { email, password } = c.req.valid('json');
     const user = db.select().from(users).where(eq(users.email, email)).get();
     if (!user || !(await verifyPassword(password, user.passwordHash))) {

@@ -170,6 +170,7 @@ wxJin #d9c9a3  wxMu #6f9a6a  wxShui #5a7fa3  wxHuo #b2564a  wxTu #b0894f
 ## Further Notes
 
 - **1:1 caveat:** Noto Serif ≠ Apple Songti at the glyph level, so the result is not byte-identical to the prototype as rendered in a Mac browser; "1:1" here means **iOS ≡ Android** (the achievable target given Apple fonts are unlicensable on Android).
+- **1:1 范围澄清（2026-08-07 追加，见 [`.scratch/auth-registration`](../auth-registration/spec.md)）：** 「严格 1:1」只约束**视觉语言 / token**(色、字、字距、焦点环、组件外观),**不约束交互与垂直间距 / 键盘行为**——后者按原生端人机工程走。原型是定宽桌面浏览器 mock,无法表达设备键盘避让与小屏 flex;注册/登录两屏据此**有意偏离**原型的固定 margin(补键盘避让、`flexGrow` 布局与呼吸留白),不属 bug、不需「修回」原型间距。
 - **Live risk (tracked, not solved):** RN new-arch iOS Fabric CJK-input bug (#56463) affects *typing* Chinese in the 对话 composer and search, not static display.
 - **`boxShadow` on Android** is young in the new architecture — verify each screen's shadows/rings on a real Android device.
 - **Dev build required** for the embedded fonts (not Expo Go).

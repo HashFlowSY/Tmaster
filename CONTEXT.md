@@ -8,6 +8,10 @@
 一个登录账号(邮箱 + 密码)。
 _Avoid_: 会员、客户、account
 
+**注册 Registration**:
+创建一个 User(邮箱 + 密码)、并随即建立一条登录 Session 的动作。到此为止——不含出生信息(那是 onboarding 阶段采集的 BirthProfile,见 ADR-0004);注册成功即交接给 onboarding。
+_Avoid_: 注册即排盘、开户
+
 **命主 Subject**:
 被排盘的对象,拥有出生信息与性别。v1 阶段命主恒等于当前登录的 User 本人(不支持为他人排盘)。
 _Avoid_: 用户(用户指账号)、本命

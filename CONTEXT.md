@@ -9,7 +9,7 @@
 _Avoid_: 会员、客户、account
 
 **注册 Registration**:
-创建一个 User(邮箱 + 密码)、并随即建立一条登录 Session 的动作。到此为止——不含出生信息(那是 onboarding 阶段采集的 BirthProfile,见 ADR-0004);注册成功即交接给 onboarding。
+创建一个 User(邮箱 + 密码)、并随即建立一条登录 Session 的动作。到此为止——不含出生信息(那是 onboarding 阶段采集的 BirthProfile,见 ADR-0009);注册成功即交接给 onboarding。
 _Avoid_: 注册即排盘、开户
 
 **命主 Subject**:

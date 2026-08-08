@@ -1,8 +1,7 @@
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import type { Gender } from '@tianji/shared';
 import { useRouter } from 'expo-router';
-import { useState, type ChangeEvent, type CSSProperties } from 'react';
-import { Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../src/api/client';
 import { BirthApi } from '../src/api/endpoints';
 import { radii } from '../src/design/radii';
@@ -21,25 +20,27 @@ import {
 } from '../src/design/primitives';
 import { hourBranchFromTime } from '../src/time/hourBranch';
 import { viewForPath } from '../src/location/regions';
-import { canSubmitBirth, commitSpinner, type SpinnerMode } from '../src/onboarding/birthForm';
+import { canSubmitBirth, daysInMonth, withDateField, type DatePart } from '../src/onboarding/birthForm';
 
 /**
  * 生辰引导页 —— 可跳过的一次性软引导（spec 实现决策 C；ADR-0009 / onboarding-nudge issue 02）。
- * 结构:头部出口(返回/稍后) + 眉标/衬线标题/副文 + 性别·历法 SegmentedControl + 年月日/时辰 picker +
- * 「时辰未知」Checkbox（复用 issue 04）+ 出生地 Cascader + helper + 「生 成 命 盘」主按钮。
+ * 结构:头部出口(返回/稍后) + 眉标/衬线标题/副文 + 性别·历法 SegmentedControl + 年/月/日 三格 + 时辰行 +
+ * 「时辰未知」Checkbox（复用 issue 04）+ 出生地 Cascader + helper + 固定底栏「生 成 命 盘」主按钮。
  *
- * 软引导化(本 issue)：头部提供离开出口(点用引导 push 进来显「返回」回来处、登录/注册 replace 进来
- * 显「稍后」进 /chat，以 router.canGoBack() 区分)；中性默认——出生地不预选、出生时刻未经滚轮确认前
- * 不算已填(dateTouched/timeTouched)、tiles 显占位；提交闸抽纯函数 canSubmitBirth(见 birthForm.ts)
- * 杜绝照抄示例盲提交；历法点「农历」弹「敬请期待」且恒留公历(不落库/不改 schema，见 RULINGS)；
- * 移除三段步骤条、眉标改「完善生辰」。既有采集逻辑(BirthApi.save/原生滚轮/Cascader 取真经度/时辰未知
- * 降级盘/busy·错误处理)保持不变。
+ * 出生时刻按**四个独立单位下拉**采集(年 / 月 / 日 / 时):点某格弹出该单位的可选列表——年只列年、月只列
+ * 月、日只列**当月**合法天数(闰年 2 月 29、小月 30…,见 daysInMonth)、时只列 0–23 时。选中即写入并关闭。
+ * 该下拉用统一的 RN 列表实现(OptionSheet),web / iOS / Android 一致,不依赖 @react-native-community/
+ * datetimepicker(其无 web 实现,曾致 web 上「连选框都没有」)。单位合并 / 钳制逻辑抽纯函数
+ * withDateField(见 birthForm.ts,表测覆盖)。
  *
- * 交互:年月日/时辰点开滚轮选择器采集真实出生时刻;出生地在 Cascader 里逐级下钻(省→市→区县),
- * 并据所选地点取真实经度。命主录入后调用真实 BirthApi.save 起盘,成功进入 /chart(沿用旧页提交与跳转契约)。
- * 时辰未知勾选后 birthTime 置 null,走领域的「降级盘(三柱)」路径(issue note;CONTEXT §出生信息)。
+ * 软引导化：头部提供离开出口(点用引导 push 进来显「返回」回来处、登录/注册 replace 进来显「稍后」进 /chat，
+ * 以 router.canGoBack() 区分)；中性默认——出生地不预选、年/月/日/时未各自选定前不算已填(yearSet…/timeSet)、
+ * tiles 显占位;提交闸抽纯函数 canSubmitBirth(见 birthForm.ts)杜绝照抄示例盲提交；历法点「农历」弹「敬请
+ * 期待」且恒留公历(不落库/不改 schema,见 RULINGS)。
  *
- * 关于滚轮选择器为原生控件、历法展示态的裁定见文末 RULINGS。
+ * 出生地在 Cascader 里逐级下钻(省→市→区县)并据所选地点取真实经度;命主录入后调用真实 BirthApi.save 起盘,
+ * 成功进入 /chart。时辰未知勾选后 birthTime 置 null,走领域的「降级盘(三柱)」路径(CONTEXT §出生信息)。
+ * 关于历法展示态的裁定见文末 RULINGS。
  */
 
 const GENDER_OPTIONS = [
@@ -53,13 +54,18 @@ const CALENDAR_OPTIONS = [
 ] as const;
 type Calendar = (typeof CALENDAR_OPTIONS)[number]['value'];
 
-// 出生时刻的滚轮**中性起点** —— 仅作 picker 打开时的初始滚轮位置,未经滚轮确认前不显示、不计入已填
-// (中性默认防盲提交,spec 实现决策 C)。刻意取通用占位值 2000-01-01 12:00(而非旧原型示例 1994-02-14
-// 寅时),这样即便命主打开滚轮不拨动直接「确定」,提交的也是显然的中性值而非一个像真人生辰的示例;月份 0 基。
-// 出生地则不预选(初始 path 为空,逼选到区县)。
+// 出生时刻**中性起点** —— 仅作各下拉未选定前的内部初值(决定「日」下拉初始按哪月列天数、列表初始滚到哪),
+// 未各自选定前 tiles 显占位、不计入已填(中性默认防盲提交,spec 实现决策 C)。取通用占位 2000-01-01 12:00,
+// 非旧原型示例(1994 寅时);月份 0 基。出生地则不预选(初始 path 为空,逼选到区县)。
 const makeNeutralMoment = () => new Date(2000, 0, 1, 12, 0, 0, 0);
 
-// 底部弹层遮罩(原型无此态——picker 为原生输入 chrome);半透明黑,一次性值,非通用调色板 token。
+// 年份下拉范围:1900 ~ 今年(避免未来年份)。今年在运行时取一次。
+const CURRENT_YEAR = new Date().getFullYear();
+
+// 下拉行高(用于列表初始滚到当前值)与列表最大高度。
+const OPT_ROW_H = 48;
+
+// 底部弹层遮罩;半透明黑,一次性值,非通用调色板 token。
 const SHEET_SCRIM = 'rgba(0,0,0,0.5)';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -71,16 +77,19 @@ export default function Onboarding() {
   const [gender, setGender] = useState<Gender>('male');
   const [calendar, setCalendar] = useState<Calendar>('solar');
   const [moment, setMoment] = useState<Date>(makeNeutralMoment);
-  // 触碰标志:出生日期/时辰未经滚轮确认前不算已填(中性默认防盲提交)。
-  const [dateTouched, setDateTouched] = useState(false);
-  const [timeTouched, setTimeTouched] = useState(false);
+  // 各单位选定标志:未选定前不算已填(中性默认防盲提交);年/月/日须各自选定,日期方视为齐备。
+  const [yearSet, setYearSet] = useState(false);
+  const [monthSet, setMonthSet] = useState(false);
+  const [daySet, setDaySet] = useState(false);
+  const [timeSet, setTimeSet] = useState(false);
   const [timeUnknown, setTimeUnknown] = useState(false);
   const [path, setPath] = useState<string[]>([]); // 出生地不预选,逼选到区县
-  const [picker, setPicker] = useState<SpinnerMode | null>(null);
+  const [open, setOpen] = useState<DatePart | null>(null); // 当前展开的单位下拉
   const [busy, setBusy] = useState(false);
 
   const loc = viewForPath(path);
   const hour = hourBranchFromTime(toBirthTime(moment));
+  const dateComplete = yearSet && monthSet && daySet;
 
   // 头部出口:栈里有上一屏(点用引导 push 进来)→「返回」回来处;否则(登录/注册 replace 进来)→「稍后」进 /chat。
   const canGoBack = router.canGoBack();
@@ -89,11 +98,16 @@ export default function Onboarding() {
   const onSelectRegion = (value: string) => setPath([...path.slice(0, loc.complete ? -1 : undefined), value]);
   const onCrumbPress = (index: number) => setPath(path.slice(0, index));
 
-  // 滚轮确认出生时刻:同步值 + 置对应触碰标志(该半从占位转为已填)。
-  const onMomentChange = (d: Date, mode: SpinnerMode) => {
-    setMoment(d);
-    if (mode === 'date') setDateTouched(true);
-    else setTimeTouched(true);
+  // 某单位下拉选中:只改该单位(withDateField 负责按月钳制日)+ 置对应选定标志 + 关闭。
+  const onPickField = (value: number) => {
+    if (open == null) return;
+    const field = open;
+    setMoment((m) => withDateField(m, field, value));
+    if (field === 'year') setYearSet(true);
+    else if (field === 'month') setMonthSet(true);
+    else if (field === 'day') setDaySet(true);
+    else setTimeSet(true);
+    setOpen(null);
   };
 
   // 历法:「农历」暂未支持——弹「敬请期待」且不切换,控件恒留公历(不落库/不改 schema,见 RULINGS)。
@@ -109,8 +123,8 @@ export default function Onboarding() {
     canSubmitBirth({
       locComplete: loc.complete,
       hasLongitude: loc.longitude != null,
-      dateTouched,
-      timeTouched,
+      dateTouched: dateComplete,
+      timeTouched: timeSet,
       timeUnknown,
     }) && !busy;
 
@@ -202,32 +216,30 @@ export default function Onboarding() {
         />
       </View>
 
-      {/* 出生日期与时辰 */}
+      {/* 出生日期与时辰 —— 年/月/日/时各为独立下拉,未各自选定前显占位「—」/「请选择」。 */}
       <View style={styles.field}>
         <Text style={styles.label}>出生日期与时辰</Text>
-        {/* 未经滚轮确认前显占位「—」(中性默认;不算已填)——占位/muted 规则收在 PickerTile 内,此处只给原值 + touched。 */}
         <View style={styles.grid3}>
-          <PickerTile k="年" v={String(moment.getFullYear())} touched={dateTouched} onPress={() => setPicker('date')} />
-          <PickerTile k="月" v={pad(moment.getMonth() + 1)} touched={dateTouched} onPress={() => setPicker('date')} />
-          <PickerTile k="日" v={pad(moment.getDate())} touched={dateTouched} onPress={() => setPicker('date')} />
+          <PickerTile k="年" v={String(moment.getFullYear())} touched={yearSet} onPress={() => setOpen('year')} />
+          <PickerTile k="月" v={pad(moment.getMonth() + 1)} touched={monthSet} onPress={() => setOpen('month')} />
+          <PickerTile k="日" v={pad(moment.getDate())} touched={daySet} onPress={() => setOpen('day')} />
         </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="选择时辰"
           disabled={timeUnknown}
-          onPress={() => setPicker('time')}
+          onPress={() => setOpen('hour')}
           style={[styles.picker, styles.pickerRow, timeUnknown && styles.pickerDisabled]}
         >
           <Text style={styles.pickerK}>时辰</Text>
           {timeUnknown ? (
             <Text style={styles.pickerV}>未知</Text>
-          ) : timeTouched ? (
-            // 原型 .picker .v：时辰名 + 小字时钟区间「寅时 03:00 – 05:00」；提交仍存所选精确 HH:mm。
+          ) : timeSet ? (
+            // 时辰名 + 小字所选整点「寅时 03:00」;时辰名由 hourBranchFromTime 从整点派生。
             <Text style={styles.pickerV}>
-              {hour.name} <Text style={styles.pickerVSmall}>{hour.range}</Text>
+              {hour.name} <Text style={styles.pickerVSmall}>{toBirthTime(moment)}</Text>
             </Text>
           ) : (
-            // 未经滚轮确认前显占位(中性默认;不算已填)。
             <Text style={[styles.pickerV, styles.pickerVMuted]}>请选择</Text>
           )}
         </Pressable>
@@ -259,22 +271,17 @@ export default function Onboarding() {
         </Text>
       </View>
 
-      {/* 仅在打开时挂载,保证每次打开都以 moment 为草稿初值(问题 1:草稿+确定)。 */}
-      {picker != null && (
-        <DobSpinner
-          mode={picker}
-          value={moment}
-          onCommit={onMomentChange}
-          onClose={() => setPicker(null)}
-        />
+      {/* 单位下拉:仅在展开时挂载,列该单位合法选项、初始滚到当前值。 */}
+      {open != null && (
+        <OptionSheet field={open} moment={moment} onPick={onPickField} onClose={() => setOpen(null)} />
       )}
     </Screen>
   );
 }
 
 /**
- * 年/月/日 picker 小格(原型 .picker,竖排 k/v),点开日期滚轮。
- * 中性默认:未经滚轮确认前(touched=false)显占位「—」且转 muted 色;确认后显传入原值。
+ * 年/月/日 小格(原型 .picker,竖排 k/v),点开对应单位下拉。
+ * 中性默认:未选定前(touched=false)显占位「—」且转 muted 色;选定后显传入原值。
  */
 function PickerTile({ k, v, touched, onPress }: { k: string; v: string; touched: boolean; onPress: () => void }) {
   return (
@@ -290,120 +297,89 @@ function PickerTile({ k, v, touched, onPress }: { k: string; v: string; touched:
   );
 }
 
-// 滚轮视觉 chrome(iOS/Android 共用):暗色主题 + 象牙字 + 金色高亮 + 24 小时制。
-const SPINNER_CHROME = {
-  display: 'spinner',
-  themeVariant: 'dark',
-  textColor: semantic.textPrimary,
-  accentColor: semantic.accent,
-  is24Hour: true,
-} as const;
+interface Opt {
+  label: string;
+  value: number;
+}
 
-// Web 原生 <input type=date/time> 的暗色样式(react-native-web 跑在 react-dom,故 web 分支用真 DOM input)。
-const WEB_INPUT_STYLE: CSSProperties = {
-  width: '100%',
-  boxSizing: 'border-box',
-  padding: '12px 14px',
-  fontSize: 17,
-  color: semantic.textPrimary,
-  background: semantic.surfaceInput,
-  border: `1px solid ${semantic.border}`,
-  borderRadius: 12,
-  colorScheme: 'dark', // 让浏览器的日期弹层也走暗色
-};
+/** 据当前单位与 moment 生成下拉选项(年降序、月 1–12、日按当月天数、时 0–23 附时辰名)与当前值。 */
+function optionsFor(field: DatePart, moment: Date): { title: string; opts: Opt[]; current: number } {
+  switch (field) {
+    case 'year': {
+      const opts: Opt[] = [];
+      for (let y = CURRENT_YEAR; y >= 1900; y--) opts.push({ label: `${y} 年`, value: y });
+      return { title: '选择出生年份', opts, current: moment.getFullYear() };
+    }
+    case 'month': {
+      const opts: Opt[] = [];
+      for (let m = 0; m < 12; m++) opts.push({ label: `${pad(m + 1)} 月`, value: m });
+      return { title: '选择出生月份', opts, current: moment.getMonth() };
+    }
+    case 'day': {
+      const total = daysInMonth(moment.getFullYear(), moment.getMonth());
+      const opts: Opt[] = [];
+      for (let d = 1; d <= total; d++) opts.push({ label: `${pad(d)} 日`, value: d });
+      return { title: '选择出生日期', opts, current: moment.getDate() };
+    }
+    case 'hour': {
+      const opts: Opt[] = [];
+      for (let h = 0; h < 24; h++) opts.push({ label: `${pad(h)}:00 · ${hourBranchFromTime(`${pad(h)}:00`).name}`, value: h });
+      return { title: '选择出生时辰', opts, current: moment.getHours() };
+    }
+  }
+}
 
 /**
- * 出生时刻选择器 —— 草稿 + 确定模型(问题 1 修复)。仅在打开时挂载(父层条件渲染),故 `draft` 每次以
- * `value` 为初值;点「确定」才 `onCommit`——**即便未改动**,确定也算一次明确选择(→ 置 touched,修「点开确定
- * 却仍显占位」);点背景 = 取消,不提交(保持中性默认)。合并只改该项负责的一半(日期半 / 时辰半),逻辑抽
- * 纯函数 `commitSpinner`(见 birthForm.ts,表测覆盖)。三端表现:
- * - **Web**:`@react-native-community/datetimepicker` 无 web 实现(渲染空白),故用浏览器原生
- *   `<input type=date/time>`(sheet 内),点确定提交草稿。
- * - **iOS**:暗色底部弹层内嵌原生滚轮,拨动只更新草稿。
- * - **Android**:系统对话框自身即确认 UI,`'set'`(确定)提交、其余(`'dismissed'`)仅关闭。
+ * 单位下拉列表 —— 底部弹层内一列可选项,选中即回传(onPick)并关闭;点背景/「完成」= 关闭不改动(保持中性默认)。
+ * 用纯 RN 列表实现,web / iOS / Android 一致(不依赖原生 datetimepicker)。初始滚到当前值附近便于命主定位。
  */
-function DobSpinner({
-  mode,
-  value,
-  onCommit,
+function OptionSheet({
+  field,
+  moment,
+  onPick,
   onClose,
 }: {
-  mode: SpinnerMode;
-  value: Date;
-  onCommit: (d: Date, mode: SpinnerMode) => void;
+  field: DatePart;
+  moment: Date;
+  onPick: (value: number) => void;
   onClose: () => void;
 }) {
-  const [draft, setDraft] = useState(value);
-  const confirm = () => {
-    onCommit(draft, mode);
-    onClose();
-  };
-
-  // Web:浏览器原生 <input>。值以 YYYY-MM-DD / HH:mm 收发,经 commitSpinner 合并进草稿(只改对应半)。
-  if (Platform.OS === 'web') {
-    const onWebChange = (e: ChangeEvent<HTMLInputElement>) => {
-      const v = e.currentTarget.value;
-      if (!v) return;
-      if (mode === 'date') {
-        const [y, m, d] = v.split('-').map(Number);
-        setDraft((cur) => commitSpinner(cur, new Date(y, m - 1, d), 'date'));
-      } else {
-        const [hh, mm] = v.split(':').map(Number);
-        setDraft((cur) => {
-          const picked = new Date(cur);
-          picked.setHours(hh, mm, 0, 0);
-          return commitSpinner(cur, picked, 'time');
-        });
-      }
-    };
-    return (
-      <Modal transparent visible animationType="fade" onRequestClose={onClose}>
-        <Pressable style={styles.sheetBackdrop} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.sheetHead}>
-            <Text style={styles.sheetTitle}>{mode === 'date' ? '选择出生日期' : '选择出生时辰'}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="确定" onPress={confirm} hitSlop={8}>
-              <Text style={styles.sheetDone}>确定</Text>
-            </Pressable>
-          </View>
-          <View style={styles.webInputWrap}>
-            <input
-              type={mode === 'date' ? 'date' : 'time'}
-              value={mode === 'date' ? toBirthDate(draft) : toBirthTime(draft)}
-              max={mode === 'date' ? toBirthDate(new Date()) : undefined}
-              onChange={onWebChange}
-              style={WEB_INPUT_STYLE}
-            />
-          </View>
-        </View>
-      </Modal>
-    );
-  }
-
-  if (Platform.OS !== 'ios') {
-    const onAndroidChange = (event: DateTimePickerEvent, picked?: Date) => {
-      onClose();
-      if (event.type === 'set' && picked != null) onCommit(commitSpinner(value, picked, mode), mode);
-    };
-    return <DateTimePicker value={value} mode={mode} onChange={onAndroidChange} {...SPINNER_CHROME} />;
-  }
-
-  // iOS:拨动只更新草稿;确定提交草稿(未拨动 → draft===value,仍提交以置 touched)。
-  const onIosChange = (_event: DateTimePickerEvent, picked?: Date) => {
-    if (picked != null) setDraft((d) => commitSpinner(d, picked, mode));
-  };
+  const { title, opts, current } = optionsFor(field, moment);
+  const currentIndex = Math.max(0, opts.findIndex((o) => o.value === current));
+  const initialY = Math.max(0, (currentIndex - 2) * OPT_ROW_H);
 
   return (
     <Modal transparent visible animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.sheetBackdrop} onPress={onClose} />
       <View style={styles.sheet}>
         <View style={styles.sheetHead}>
-          <Text style={styles.sheetTitle}>{mode === 'date' ? '选择出生日期' : '选择出生时辰'}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="确定" onPress={confirm} hitSlop={8}>
-            <Text style={styles.sheetDone}>确定</Text>
+          <Text style={styles.sheetTitle}>{title}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="完成" onPress={onClose} hitSlop={8}>
+            <Text style={styles.sheetDone}>完成</Text>
           </Pressable>
         </View>
-        <DateTimePicker value={draft} mode={mode} onChange={onIosChange} {...SPINNER_CHROME} />
+        <ScrollView
+          style={styles.optScroll}
+          contentOffset={{ x: 0, y: initialY }}
+          showsVerticalScrollIndicator={false}
+        >
+          {opts.map((o) => {
+            const selected = o.value === current;
+            return (
+              <Pressable
+                key={o.value}
+                accessibilityRole="button"
+                accessibilityLabel={o.label}
+                accessibilityState={{ selected }}
+                onPress={() => onPick(o.value)}
+                style={styles.optRow}
+              >
+                <Text style={[styles.optLabel, selected && styles.optLabelSel]}>{o.label}</Text>
+                {selected ? <Text style={styles.optCheck}>✓</Text> : null}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -468,7 +444,7 @@ const styles = StyleSheet.create({
   pickerK: { fontFamily: fonts.sans, fontSize: 11, letterSpacing: tracking(0.06, 11), color: semantic.textSecondary },
   // 原型 .picker .v：17 / 象牙 / 等宽数字。
   pickerV: { fontFamily: fonts.sans, fontSize: 17, color: semantic.textPrimary, ...tabularNums },
-  // 未确认占位(「—」/「请选择」):同尺寸、faint 色,读作「尚未填写」。
+  // 未选定占位(「—」/「请选择」):同尺寸、faint 色,读作「尚未填写」。
   pickerVMuted: { color: semantic.textFaint },
   // 原型 .picker .v small：12 / muted。
   pickerVSmall: { fontFamily: fonts.sans, fontSize: 12, color: semantic.textSecondary },
@@ -493,7 +469,7 @@ const styles = StyleSheet.create({
     marginTop: 7,
   },
 
-  // iOS 滚轮底部弹层(暗色,原型无此态——picker 为原生输入 chrome,见 RULINGS)。
+  // 单位下拉底部弹层(暗色)。
   sheetBackdrop: { flex: 1, backgroundColor: SHEET_SCRIM },
   sheet: {
     backgroundColor: semantic.surface,
@@ -503,8 +479,6 @@ const styles = StyleSheet.create({
     borderColor: semantic.border,
     paddingBottom: 24,
   },
-  // web 原生 input 的内边距容器(sheet 内)。
-  webInputWrap: { paddingHorizontal: 20, paddingVertical: 18 },
   sheetHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -526,18 +500,32 @@ const styles = StyleSheet.create({
     letterSpacing: tracking(0.04, 15),
     color: semantic.accentBright,
   },
+  // 下拉列表:限高滚动;每行定高(OPT_ROW_H)以便初始滚到当前值。
+  optScroll: { maxHeight: OPT_ROW_H * 6 },
+  optRow: {
+    height: OPT_ROW_H,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 22,
+    borderBottomWidth: 1,
+    borderBottomColor: semantic.borderFaint,
+  },
+  optLabel: { fontFamily: fonts.sans, fontSize: 16, color: semantic.textPrimary, ...tabularNums },
+  optLabelSel: { color: semantic.accentBright },
+  optCheck: { fontFamily: fonts.sans, fontSize: 15, color: semantic.accent },
 });
 
 // ============ RULINGS(pixel-1:1 exceptions,spec User Story 29)============
 //
-// · 年月日/时辰滚轮为**原生输入 chrome**:采用 @react-native-community/datetimepicker(display=spinner)。
-//   spec 的 1:1 判据是「iOS≡Android 渲染一致」,针对的是被设计的**屏幕表面**;瞬态的系统选择器与键盘、
-//   真机状态栏同属原生输入 chrome(spec 本就用真 OS 状态栏),其两端外观差异可接受。持久的引导屏(picker 小格、
-//   分段控件、Cascader)仍严格 1:1。iOS 内嵌进暗色底部弹层统一观感,Android 走系统对话框。
-// · 时辰展示为「时辰名 + 精确 HH:mm」:领域按精确墙钟时间存 birthTime(真太阳时校正据此定时柱,
-//   CONTEXT §真太阳时),时辰名由 hourBranchFromTime 从时间派生,仅作阅读辅助。
-// · 出生地经度取所选地点就近经度(见 src/location/regions.ts):精选省/市/区县子集,城市级挂真实经度、
-//   区县就近继承;非全国穷举,可扩充。全量地理编码超出 spec Out of Scope,但经度已随所选地点真实变化。
+// · 出生时刻改为**四个单位下拉**(年/月/日/时)而非原型的年月日+时辰滚轮:原生滚轮
+//   (@react-native-community/datetimepicker)无 web 实现、在本项目的 web 预览下渲染空白,故统一改用纯 RN
+//   列表下拉(OptionSheet),三端一致且各单位互不干扰(年只年、月只月、日只列当月合法天数、时只时)。
+//   底部弹层为原型无的一次性交互 chrome,观感克制;持久的引导屏(小格、分段控件、Cascader)仍严格 1:1。
+// · 时辰按整点采集(分钟不再录入,「时只允许选择时」):birthTime 存所选整点 HH:00,时辰名由
+//   hourBranchFromTime 从整点派生,仅作阅读辅助(真太阳时校正据此定时柱,CONTEXT §真太阳时)。
+// · 出生地经度取所选地点就近经度(见 src/location/regions.ts + longitudes.ts):全量省市区名录,城市级挂
+//   经度、区县就近继承;详见该两文件说明。
 // · 历法(公历/农历)恒留公历:点「农历」弹「敬请期待」提示并**不切换**(value 恒 solar),防命主把农历
 //   日期当公历静默起错盘(ADR-0009)。BirthProfileInput schema 不含历法字段(spec 禁改 schema),历法
 //   不落库、不随提交发送;农历录入(含农历→公历换算 / schema 迁移)另立含迁移的工单,超出本 issue 范围。

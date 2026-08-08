@@ -1,4 +1,4 @@
-import { canSubmitBirth, commitSpinner, type BirthSubmitInput } from './birthForm';
+import { canSubmitBirth, daysInMonth, withDateField, type BirthSubmitInput } from './birthForm';
 
 // 中性默认提交闸的纯函数测试（spec 实现决策 C / 测试缝 3）——穷举「缺任一必填 → false、
 // 齐备或勾未知 → true」。只断可观察返回，不耦合屏幕状态接线。
@@ -51,29 +51,55 @@ describe('canSubmitBirth', () => {
   });
 });
 
-// 滚轮确认合并的纯函数测试（问题 1 修复：草稿+确定模型的合并逻辑抽纯，无 RN）。
-// 「日期滚轮」只改年月日、保留原时分；「时辰滚轮」只改时分、保留原年月日并把秒/毫秒归零。
-describe('commitSpinner', () => {
-  it('date 模式:取 picked 的年月日,保留 base 的时分', () => {
-    const base = new Date(2000, 5, 15, 8, 30, 45, 500); // 2000-06-15 08:30:45.500
-    const picked = new Date(1994, 1, 14, 3, 5, 0, 0); // 1994-02-14 03:05
-    const out = commitSpinner(base, picked, 'date');
-    expect([out.getFullYear(), out.getMonth(), out.getDate()]).toEqual([1994, 1, 14]);
-    expect([out.getHours(), out.getMinutes()]).toEqual([8, 30]); // 时分沿用 base
+// 各单位下拉的纯逻辑（年/月/日/时独立选择）：某月天数 + 「只改一个单位并按月份钳制日」的合并。
+describe('daysInMonth', () => {
+  it('闰年 2 月 29 天、平年 28 天', () => {
+    expect(daysInMonth(2000, 1)).toBe(29); // 2000 闰
+    expect(daysInMonth(2001, 1)).toBe(28); // 2001 平
+    expect(daysInMonth(1900, 1)).toBe(28); // 1900 非闰（百年不闰）
   });
 
-  it('time 模式:取 picked 的时分(秒/毫秒归零),保留 base 的年月日', () => {
-    const base = new Date(2000, 5, 15, 8, 30, 45, 500);
-    const picked = new Date(1994, 1, 14, 3, 5, 0, 0);
-    const out = commitSpinner(base, picked, 'time');
-    expect([out.getFullYear(), out.getMonth(), out.getDate()]).toEqual([2000, 5, 15]); // 年月日沿用 base
-    expect([out.getHours(), out.getMinutes(), out.getSeconds(), out.getMilliseconds()]).toEqual([3, 5, 0, 0]);
+  it('大月 31、小月 30', () => {
+    expect(daysInMonth(2023, 0)).toBe(31); // 1 月
+    expect(daysInMonth(2023, 3)).toBe(30); // 4 月
+    expect(daysInMonth(2023, 11)).toBe(31); // 12 月
+  });
+});
+
+describe('withDateField', () => {
+  it('year:只改年份、保留月/日/时分', () => {
+    const out = withDateField(new Date(2000, 5, 15, 8, 30, 0, 0), 'year', 1990);
+    expect([out.getFullYear(), out.getMonth(), out.getDate(), out.getHours(), out.getMinutes()]).toEqual([
+      1990, 5, 15, 8, 30,
+    ]);
+  });
+
+  it('year:目标年该月天数不足时钳制日（2/29 → 平年 2/28）', () => {
+    const out = withDateField(new Date(2000, 1, 29, 8, 0, 0, 0), 'year', 2001);
+    expect([out.getFullYear(), out.getMonth(), out.getDate()]).toEqual([2001, 1, 28]);
+  });
+
+  it('month:只改月份;原日超新月天数时钳制（1/31 → 2 月 → 2/29）', () => {
+    const out = withDateField(new Date(2000, 0, 31, 8, 0, 0, 0), 'month', 1); // month0=1 → 二月
+    expect([out.getFullYear(), out.getMonth(), out.getDate()]).toEqual([2000, 1, 29]);
+  });
+
+  it('day:只改日、保留年月时分', () => {
+    const out = withDateField(new Date(2000, 0, 15, 8, 30, 0, 0), 'day', 20);
+    expect([out.getMonth(), out.getDate(), out.getHours(), out.getMinutes()]).toEqual([0, 20, 8, 30]);
+  });
+
+  it('hour:只改小时,分/秒/毫秒归零,保留年月日', () => {
+    const out = withDateField(new Date(2000, 0, 15, 8, 30, 45, 500), 'hour', 3);
+    expect([out.getDate(), out.getHours(), out.getMinutes(), out.getSeconds(), out.getMilliseconds()]).toEqual([
+      15, 3, 0, 0, 0,
+    ]);
   });
 
   it('纯函数:不改动传入的 base', () => {
     const base = new Date(2000, 5, 15, 8, 30, 0, 0);
     const snapshot = base.getTime();
-    commitSpinner(base, new Date(1994, 1, 14, 3, 5), 'date');
+    withDateField(base, 'year', 1990);
     expect(base.getTime()).toBe(snapshot);
   });
 });

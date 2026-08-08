@@ -31,21 +31,40 @@ export function canSubmitBirth(input: BirthSubmitInput): boolean {
   return locComplete && hasLongitude && dateTouched && (timeUnknown || timeTouched);
 }
 
-/** 滚轮模式:'date' 只改年月日、'time' 只改时分。 */
-export type SpinnerMode = 'date' | 'time';
+/** 出生时刻的单位下拉:年 / 月(0 基) / 日 / 时——各自独立选择。 */
+export type DatePart = 'year' | 'month' | 'day' | 'hour';
+
+/** 给定年份 + 0 基月份的当月天数（含闰年 2 月）。用于「日」下拉只列该月合法天数。 */
+export function daysInMonth(year: number, month0: number): number {
+  // 下个月第 0 天 = 当月最后一天。
+  return new Date(year, month0 + 1, 0).getDate();
+}
 
 /**
- * 把滚轮确认的 `picked` 合并进 `base`,只覆盖该滚轮负责的一半(问题 1「草稿+确定」模型的合并逻辑)。
- * - `date`:取 picked 的年月日,保留 base 的时分(时辰半不动)。
- * - `time`:取 picked 的时分并把秒/毫秒归零,保留 base 的年月日(日期半不动)。
- * 纯函数:返回新 `Date`,不改动 base(可脱离 RN 表测)。
+ * 在 `base` 上只改一个单位,返回新 `Date`（纯函数,不改动 base,可脱离 RN 表测）。
+ * - `year` / `month`:若原「日」超出目标年月的天数,钳制到当月最后一天（如 1/31 改到 2 月 → 2/29）。
+ * - `day`:只改日（调用方已用 daysInMonth 约束选项,不会越界）。
+ * - `hour`:只改小时,分 / 秒 / 毫秒归零（「时只允许选择时」,不采集分钟）。
  */
-export function commitSpinner(base: Date, picked: Date, mode: SpinnerMode): Date {
+export function withDateField(base: Date, part: DatePart, value: number): Date {
   const next = new Date(base);
-  if (mode === 'date') {
-    next.setFullYear(picked.getFullYear(), picked.getMonth(), picked.getDate());
-  } else {
-    next.setHours(picked.getHours(), picked.getMinutes(), 0, 0);
+  switch (part) {
+    case 'year': {
+      const day = Math.min(next.getDate(), daysInMonth(value, next.getMonth()));
+      next.setFullYear(value, next.getMonth(), day);
+      break;
+    }
+    case 'month': {
+      const day = Math.min(next.getDate(), daysInMonth(next.getFullYear(), value));
+      next.setFullYear(next.getFullYear(), value, day);
+      break;
+    }
+    case 'day':
+      next.setDate(value);
+      break;
+    case 'hour':
+      next.setHours(value, 0, 0, 0);
+      break;
   }
   return next;
 }

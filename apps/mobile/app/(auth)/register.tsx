@@ -25,7 +25,8 @@ import { Button, Checkbox, Eyebrow, Field, HSerif, Icon, Screen, Sub, Toast } fr
  *
  * 布局（spec §D）：`Screen` 开 `avoidKeyboard`；内容容器 `flexGrow:1` + flex 列，页脚经弹性间隔
  * 下沉——高屏有呼吸、矮屏自然滚动。呼吸留白仅经本屏 `contentStyle`，不动全局 `Screen`（不回归其余 8 屏）。
- * 成功 `→ /onboarding`（ADR-0004 门槛不变）；提交中按钮加载态并禁重复点击。
+ * 成功后**不自行跳转**：由 RootNav/resolveLanding 依 `nudgeOnboarding` 单一决定落点（新用户 → `/onboarding`，
+ * 见 ADR-0009 / 票 01，消除旧 `replace` 竞态与死返回键）；提交中按钮加载态并禁重复点击。
  */
 export default function RegisterScreen() {
   const { register } = useAuth();
@@ -89,7 +90,8 @@ export default function RegisterScreen() {
     setBusy(true);
     try {
       await register({ email, password });
-      router.replace('/onboarding');
+      // 落点不在此跳转：register() 置 nudgeOnboarding=true 后，由 RootNav/resolveLanding 单一决定
+      // 落 /onboarding（消除原 replace 与 RootNav 抢跑的竞态与死返回键，见 ADR-0009 / 票 01）。
     } catch (err) {
       const presentation = mapAuthError(err);
       if (presentation.kind === 'fields') {

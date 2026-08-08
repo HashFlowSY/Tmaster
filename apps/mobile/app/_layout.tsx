@@ -4,21 +4,19 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../src/auth/AuthContext';
 import { semantic } from '../src/design/semantic';
+import { resolveLanding } from '../src/navigation/resolveLanding';
 
+// 导航守卫：落点决策全交 resolveLanding（纯函数、可穷举单测），本组件仅为其薄包装——
+// 读 auth 态 + 当前路由组，算出目标，非 null 即 replace。注册屏不再自行跳转，落点单一来源在此。
 function RootNav() {
-  const { ready, authenticated } = useAuth();
+  const { ready, authenticated, nudgeOnboarding } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (!ready) return;
-    const inAuthGroup = segments[0] === '(auth)';
-    if (!authenticated && !inAuthGroup) {
-      router.replace('/login');
-    } else if (authenticated && inAuthGroup) {
-      router.replace('/chat');
-    }
-  }, [ready, authenticated, segments, router]);
+    const target = resolveLanding({ ready, authenticated, nudgeOnboarding, group: segments[0] });
+    if (target) router.replace(target);
+  }, [ready, authenticated, nudgeOnboarding, segments, router]);
 
   return (
     <Stack

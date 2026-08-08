@@ -1,14 +1,24 @@
 // 出生地行政区数据 + 纯导航逻辑。生辰引导 Cascader 据此逐级下钻（省→市→区县，直辖市 省→区），
 // 并从所选地点就近取「经度」用于真太阳时校正（CONTEXT §真太阳时）。纯逻辑，测试见 regions.test.ts。
 //
-// 说明：这是一份**精选子集**（覆盖东经 ~87°–127° 的代表城市），非全国穷举——足以让命主选到真实出生地、
-// 让经度真正随地点变化，且可按需扩充。经度取各城市市中心近似值（东经为正）。区县经度就近继承所属城市
-// （同城各区经度差 <0.5°，对真太阳时影响可忽略）。
+// 区划名为**全量**（31 省级 / ~340 地级 / ~2900 县级），来自 china-division@2.7.0 的 dist/pca.json
+// （MIT / WTFPL，随包附带的名录，见 data/pca.json）——本项目仅内嵌该名录 JSON、不引入运行时依赖。
+// 经度按「省会基线 + 主要城市覆盖」建模（见 longitudes.ts）：城市无覆盖则就近继承省基线，区县继承所属市。
+
+import pcaRaw from './data/pca.json';
+import { CITY_LONGITUDE, PROVINCE_LONGITUDE } from './longitudes';
+
+/** pca.json 形状：省 → 市 → 区县名数组。 */
+type Pca = Record<string, Record<string, readonly string[]>>;
+const PCA = pcaRaw as Pca;
+
+// 直辖市在 pca 里以伪市级「市辖区」/「县」包一层；折叠掉，让区县直接挂到省下（省→区县两级）。
+const MUNICIPALITY_WRAP = new Set(['市辖区', '县']);
 
 export interface Region {
   /** 行政区名（面包屑与提交 birthplace 用）。 */
   name: string;
-  /** 经度（东经正）。挂在城市级；下辖区县就近继承。 */
+  /** 经度（东经正）。省级挂基线、覆盖市挂市级真经度；未挂者由 longitudeForPath 就近继承祖先。 */
   longitude?: number;
   /** 其子级的类别名，用于「选择{childLabel}」占位提示（省份 / 城市 / 区县）。 */
   childLabel?: string;
@@ -16,102 +26,36 @@ export interface Region {
   children?: Region[];
 }
 
-const districts = (...names: string[]): Region[] => names.map((name) => ({ name }));
+const leaves = (names: readonly string[]): Region[] => names.map((name) => ({ name }));
 
-// 直辖市按 省→区 两级建模（childLabel 直接为「区县」）；省份按 省→市→区县 三级。
-const PROVINCES: Region[] = [
-  {
-    name: '北京市',
-    longitude: 116.41,
-    childLabel: '区县',
-    children: districts('东城区', '西城区', '朝阳区', '海淀区', '丰台区'),
-  },
-  {
-    name: '上海市',
-    longitude: 121.47,
-    childLabel: '区县',
-    children: districts('黄浦区', '徐汇区', '长宁区', '静安区', '浦东新区'),
-  },
-  {
-    name: '浙江省',
-    childLabel: '城市',
-    children: [
-      {
-        name: '杭州市',
-        longitude: 120.15,
-        childLabel: '区县',
-        children: districts('西湖区', '上城区', '拱墅区', '滨江区', '余杭区', '萧山区'),
-      },
-      { name: '宁波市', longitude: 121.55, childLabel: '区县', children: districts('海曙区', '江北区', '鄞州区') },
-    ],
-  },
-  {
-    name: '广东省',
-    childLabel: '城市',
-    children: [
-      {
-        name: '广州市',
-        longitude: 113.26,
-        childLabel: '区县',
-        children: districts('越秀区', '天河区', '海珠区', '白云区'),
-      },
-      {
-        name: '深圳市',
-        longitude: 114.06,
-        childLabel: '区县',
-        children: districts('福田区', '南山区', '罗湖区', '宝安区'),
-      },
-    ],
-  },
-  {
-    name: '四川省',
-    childLabel: '城市',
-    children: [
-      {
-        name: '成都市',
-        longitude: 104.07,
-        childLabel: '区县',
-        children: districts('锦江区', '青羊区', '武侯区', '成华区'),
-      },
-    ],
-  },
-  {
-    name: '陕西省',
-    childLabel: '城市',
-    children: [
-      {
-        name: '西安市',
-        longitude: 108.94,
-        childLabel: '区县',
-        children: districts('新城区', '碑林区', '雁塔区', '未央区'),
-      },
-    ],
-  },
-  {
-    name: '黑龙江省',
-    childLabel: '城市',
-    children: [
-      {
-        name: '哈尔滨市',
-        longitude: 126.53,
-        childLabel: '区县',
-        children: districts('道里区', '南岗区', '香坊区'),
-      },
-    ],
-  },
-  {
-    name: '新疆维吾尔自治区',
-    childLabel: '城市',
-    children: [
-      {
-        name: '乌鲁木齐市',
-        longitude: 87.62,
-        childLabel: '区县',
-        children: districts('天山区', '沙依巴克区', '水磨沟区'),
-      },
-    ],
-  },
-];
+// 由 pca.json 构建省级行政区树（模块加载时一次性）：折叠直辖市伪市级、按 longitudes 表挂经度。
+function buildProvinces(): Region[] {
+  return Object.entries(PCA).map(([province, cities]) => {
+    const isMunicipality = Object.keys(cities).some((c) => MUNICIPALITY_WRAP.has(c));
+    const children: Region[] = [];
+    for (const [city, areas] of Object.entries(cities)) {
+      if (MUNICIPALITY_WRAP.has(city)) {
+        // 直辖市：折叠伪市级，区县直接作为省的子级。
+        children.push(...leaves(areas));
+      } else {
+        children.push({
+          name: city,
+          longitude: CITY_LONGITUDE[city], // 无覆盖 → undefined，就近继承省基线
+          childLabel: '区县',
+          children: leaves(areas),
+        });
+      }
+    }
+    return {
+      name: province,
+      longitude: PROVINCE_LONGITUDE[province], // 省会 / 直辖市基线
+      childLabel: isMunicipality ? '区县' : '城市',
+      children,
+    };
+  });
+}
+
+const PROVINCES: Region[] = buildProvinces();
 
 // 合成根:把「选择省份」的占位提示与顶层省份统一进同一棵树,导航逻辑对根/枝一视同仁。
 const ROOT: Region = { name: '', childLabel: '省份', children: PROVINCES };

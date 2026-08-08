@@ -21,7 +21,7 @@ import {
 } from '../src/design/primitives';
 import { hourBranchFromTime } from '../src/time/hourBranch';
 import { viewForPath } from '../src/location/regions';
-import { canSubmitBirth } from '../src/onboarding/birthForm';
+import { canSubmitBirth, commitSpinner, type SpinnerMode } from '../src/onboarding/birthForm';
 
 /**
  * 生辰引导页 —— 可跳过的一次性软引导（spec 实现决策 C；ADR-0009 / onboarding-nudge issue 02）。
@@ -54,8 +54,10 @@ const CALENDAR_OPTIONS = [
 type Calendar = (typeof CALENDAR_OPTIONS)[number]['value'];
 
 // 出生时刻的滚轮**中性起点** —— 仅作 picker 打开时的初始滚轮位置,未经滚轮确认前不显示、不计入已填
-// (中性默认防盲提交,spec 实现决策 C);月份 0 基,1 = 二月。出生地则不预选(初始 path 为空,逼选到区县)。
-const makeNeutralMoment = () => new Date(1994, 1, 14, 3, 0, 0, 0);
+// (中性默认防盲提交,spec 实现决策 C)。刻意取通用占位值 2000-01-01 12:00(而非旧原型示例 1994-02-14
+// 寅时),这样即便命主打开滚轮不拨动直接「确定」,提交的也是显然的中性值而非一个像真人生辰的示例;月份 0 基。
+// 出生地则不预选(初始 path 为空,逼选到区县)。
+const makeNeutralMoment = () => new Date(2000, 0, 1, 12, 0, 0, 0);
 
 // 底部弹层遮罩(原型无此态——picker 为原生输入 chrome);半透明黑,一次性值,非通用调色板 token。
 const SHEET_SCRIM = 'rgba(0,0,0,0.5)';
@@ -74,7 +76,7 @@ export default function Onboarding() {
   const [timeTouched, setTimeTouched] = useState(false);
   const [timeUnknown, setTimeUnknown] = useState(false);
   const [path, setPath] = useState<string[]>([]); // 出生地不预选,逼选到区县
-  const [picker, setPicker] = useState<'date' | 'time' | null>(null);
+  const [picker, setPicker] = useState<SpinnerMode | null>(null);
   const [busy, setBusy] = useState(false);
 
   const loc = viewForPath(path);
@@ -88,7 +90,7 @@ export default function Onboarding() {
   const onCrumbPress = (index: number) => setPath(path.slice(0, index));
 
   // 滚轮确认出生时刻:同步值 + 置对应触碰标志(该半从占位转为已填)。
-  const onMomentChange = (d: Date, mode: 'date' | 'time') => {
+  const onMomentChange = (d: Date, mode: SpinnerMode) => {
     setMoment(d);
     if (mode === 'date') setDateTouched(true);
     else setTimeTouched(true);
@@ -138,6 +140,12 @@ export default function Onboarding() {
   return (
     <Screen
       scroll
+      footer={
+        // 固定底栏:主按钮常驻可见,不随 Cascader 选项撑高而被挤出屏外(问题 3)。
+        <Button variant="primary" disabled={!canSubmit} onPress={onSubmit}>
+          {busy ? '起 盘 中…' : '生 成 命 盘'}
+        </Button>
+      }
       header={
         <View style={styles.titleRow}>
           {canGoBack ? (
@@ -251,18 +259,15 @@ export default function Onboarding() {
         </Text>
       </View>
 
-      <View style={styles.submit}>
-        <Button variant="primary" disabled={!canSubmit} onPress={onSubmit}>
-          {busy ? '起 盘 中…' : '生 成 命 盘'}
-        </Button>
-      </View>
-
-      <DobSpinner
-        mode={picker}
-        value={moment}
-        onChange={onMomentChange}
-        onClose={() => setPicker(null)}
-      />
+      {/* 仅在打开时挂载,保证每次打开都以 moment 为草稿初值(问题 1:草稿+确定)。 */}
+      {picker != null && (
+        <DobSpinner
+          mode={picker}
+          value={moment}
+          onCommit={onMomentChange}
+          onClose={() => setPicker(null)}
+        />
+      )}
     </Screen>
   );
 }
@@ -285,47 +290,52 @@ function PickerTile({ k, v, touched, onPress }: { k: string; v: string; touched:
   );
 }
 
+// 滚轮视觉 chrome(两端共用):暗色主题 + 象牙字 + 金色高亮 + 24 小时制。
+const SPINNER_CHROME = {
+  display: 'spinner',
+  themeVariant: 'dark',
+  textColor: semantic.textPrimary,
+  accentColor: semantic.accent,
+  is24Hour: true,
+} as const;
+
 /**
- * 出生时刻滚轮选择器。RN 原生 DateTimePicker(display=spinner):iOS 内嵌进暗色底部弹层 + 确定;
- * Android 走系统对话框(无法嵌入自定义容器)。改动只改所选时刻的日期部分或时间部分,另一半保持不变。
+ * 出生时刻滚轮选择器 —— 草稿 + 确定模型(问题 1 修复)。仅在打开时挂载(父层条件渲染),故 `draft` 每次以
+ * `value` 为初值。
+ * - iOS:内嵌进暗色底部弹层;拨动滚轮只更新 `draft`,点「确定」才 `onCommit`——**即便未拨动**,确定也算一次
+ *   明确选择(→ 置 touched,修「点开确定却仍显占位」);点背景 = 取消,不提交(保持中性默认)。
+ * - Android:系统对话框自身即确认 UI,`'set'`(确定)提交、其余(`'dismissed'`)仅关闭。
+ * 合并只改该滚轮负责的一半(日期半 / 时辰半),逻辑抽纯函数 `commitSpinner`(见 birthForm.ts,表测覆盖)。
  */
 function DobSpinner({
   mode,
   value,
-  onChange,
+  onCommit,
   onClose,
 }: {
-  mode: 'date' | 'time' | null;
+  mode: SpinnerMode;
   value: Date;
-  onChange: (d: Date, mode: 'date' | 'time') => void;
+  onCommit: (d: Date, mode: SpinnerMode) => void;
   onClose: () => void;
 }) {
-  if (mode == null) return null;
+  const [draft, setDraft] = useState(value);
 
-  const apply = (event: DateTimePickerEvent, picked?: Date) => {
-    // Android 选完即关(对话框);iOS 内嵌,保持打开由确定/背景关闭。
-    if (Platform.OS !== 'ios') onClose();
-    if (event.type === 'dismissed' || picked == null) return;
-    const next = new Date(value);
-    if (mode === 'date') next.setFullYear(picked.getFullYear(), picked.getMonth(), picked.getDate());
-    else next.setHours(picked.getHours(), picked.getMinutes(), 0, 0);
-    onChange(next, mode);
+  if (Platform.OS !== 'ios') {
+    const onAndroidChange = (event: DateTimePickerEvent, picked?: Date) => {
+      onClose();
+      if (event.type === 'set' && picked != null) onCommit(commitSpinner(value, picked, mode), mode);
+    };
+    return <DateTimePicker value={value} mode={mode} onChange={onAndroidChange} {...SPINNER_CHROME} />;
+  }
+
+  // iOS:拨动只更新草稿;确定提交草稿(未拨动 → draft===value,仍提交以置 touched)。
+  const onIosChange = (_event: DateTimePickerEvent, picked?: Date) => {
+    if (picked != null) setDraft((d) => commitSpinner(d, picked, mode));
   };
-
-  const spinner = (
-    <DateTimePicker
-      value={value}
-      mode={mode}
-      display="spinner"
-      onChange={apply}
-      themeVariant="dark"
-      textColor={semantic.textPrimary}
-      accentColor={semantic.accent}
-      is24Hour
-    />
-  );
-
-  if (Platform.OS !== 'ios') return spinner;
+  const confirm = () => {
+    onCommit(draft, mode);
+    onClose();
+  };
 
   return (
     <Modal transparent visible animationType="slide" onRequestClose={onClose}>
@@ -333,11 +343,11 @@ function DobSpinner({
       <View style={styles.sheet}>
         <View style={styles.sheetHead}>
           <Text style={styles.sheetTitle}>{mode === 'date' ? '选择出生日期' : '选择出生时辰'}</Text>
-          <Pressable accessibilityRole="button" onPress={onClose} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel="确定" onPress={confirm} hitSlop={8}>
             <Text style={styles.sheetDone}>确定</Text>
           </Pressable>
         </View>
-        {spinner}
+        <DateTimePicker value={draft} mode={mode} onChange={onIosChange} {...SPINNER_CHROME} />
       </View>
     </Modal>
   );
@@ -426,9 +436,6 @@ const styles = StyleSheet.create({
     color: semantic.textFaint,
     marginTop: 7,
   },
-
-  // 主按钮:原型 margin-top:8。
-  submit: { marginTop: 8 },
 
   // iOS 滚轮底部弹层(暗色,原型无此态——picker 为原生输入 chrome,见 RULINGS)。
   sheetBackdrop: { flex: 1, backgroundColor: SHEET_SCRIM },

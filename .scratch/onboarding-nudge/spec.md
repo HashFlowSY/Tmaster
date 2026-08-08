@@ -5,7 +5,7 @@ description: 登录/注册后对未建 BirthProfile 的命主做一次可跳过�
 
 # 天机 · 登录后生辰引导（可跳过软引导）Spec
 
-Status: ready-for-agent
+Status: done（两票均落地：代码 + 自动化全绿 + 真机人工核对由用户通过，2026-08-08）
 
 > 相关决策：**[ADR-0009 生辰引导用可跳过的软提示而非登录门](../../docs/adr/0009-onboarding-nudge-not-login-gate.md)（本 spec 核心，随本 spec 产出）** · [ADR-0004 对话按系统分型 / 八字卡 onboarding、奇门不卡](../../docs/adr/0004-conversation-typed-by-system.md) · [ADR-0003 有状态会话认证](../../docs/adr/0003-stateful-session-auth.md) · [ADR-0002 局域网明文部署](../../docs/adr/0002-local-lan-cleartext-deployment.md) · [ADR-0008 统一 API 响应信封](../../docs/adr/0008-unified-api-response-envelope.md) · 术语见 [CONTEXT.md](../../CONTEXT.md) · 视觉真源 `docs/ui/tianji-app-design.html`
 

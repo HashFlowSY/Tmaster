@@ -6,7 +6,7 @@
 
 **Blocked by:** None — can start immediately.（与票 02 无共享文件，可并行）
 
-**Status:** ready-for-human（代码 + 自动化测试完成，待真机人工核对）
+**Status:** done (commit a988510) — 代码 + 自动化（nudge 5 例 + resolveLanding 真值表 16 例）全绿；登录/注册/冷启动落点真机人工核对由用户通过 ✓（2026-08-08）
 
 - [x] 无生辰的命主**登录**后落到 `/onboarding`：登录时查 `BirthApi.get()`，`404 not_found`**或网络失败**都判为需引导（fail-toward-引导）。
 - [x] 已有生辰的命主登录后直接落 `/chat`，不经引导。
@@ -16,7 +16,7 @@
 - [x] 落点决策抽成纯函数 `resolveLanding`（签名与真值表见 spec 实现决策 B），导航守卫仅为其薄包装；穷举 `(ready × authenticated × nudgeOnboarding × group)` 的落点真值表由单测覆盖，**无需 mock expo-router**（prior art：`conversationMeta.test.ts`）。
 - [x] 生辰判定标志 `nudgeOnboarding` 由 `AuthContext.test` **扩测**覆盖可观察行为：登录+200→`false`、登录+404→`true`、登录+网络失败→`true`、注册→`true` 且 `BirthApi.get` 未被调用（prior art：现有 `AuthContext.test.tsx`）。
 - [x] `/me` 契约不变；服务端不新增强制层（维持既有 `409 birth_required` 兜底）。
-- [ ] 真机人工核对（建议、不阻断）：登录/注册/冷启动三条路径落点正确，注册返回键不再是死键。
+- [x] 真机人工核对（用户完成 ✓ 2026-08-08）：登录/注册/冷启动三条路径落点正确，注册返回键不再是死键。
 
 ## Implementation Notes
 

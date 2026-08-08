@@ -21,11 +21,19 @@ import {
 } from '../src/design/primitives';
 import { hourBranchFromTime } from '../src/time/hourBranch';
 import { viewForPath } from '../src/location/regions';
+import { canSubmitBirth } from '../src/onboarding/birthForm';
 
 /**
- * 生辰引导页 —— 与原型 docs/ui/tianji-app-design.html 的 onboarding 屏 1:1（spec §8、issue 05）。
- * 结构:返回头 + 步骤条 + 眉标/衬线标题/副文 + 性别·历法 SegmentedControl + 年月日/时辰 picker +
+ * 生辰引导页 —— 可跳过的一次性软引导（spec 实现决策 C；ADR-0009 / onboarding-nudge issue 02）。
+ * 结构:头部出口(返回/稍后) + 眉标/衬线标题/副文 + 性别·历法 SegmentedControl + 年月日/时辰 picker +
  * 「时辰未知」Checkbox（复用 issue 04）+ 出生地 Cascader + helper + 「生 成 命 盘」主按钮。
+ *
+ * 软引导化(本 issue)：头部提供离开出口(点用引导 push 进来显「返回」回来处、登录/注册 replace 进来
+ * 显「稍后」进 /chat，以 router.canGoBack() 区分)；中性默认——出生地不预选、出生时刻未经滚轮确认前
+ * 不算已填(dateTouched/timeTouched)、tiles 显占位；提交闸抽纯函数 canSubmitBirth(见 birthForm.ts)
+ * 杜绝照抄示例盲提交；历法点「农历」弹「敬请期待」且恒留公历(不落库/不改 schema，见 RULINGS)；
+ * 移除三段步骤条、眉标改「完善生辰」。既有采集逻辑(BirthApi.save/原生滚轮/Cascader 取真经度/时辰未知
+ * 降级盘/busy·错误处理)保持不变。
  *
  * 交互:年月日/时辰点开滚轮选择器采集真实出生时刻;出生地在 Cascader 里逐级下钻(省→市→区县),
  * 并据所选地点取真实经度。命主录入后调用真实 BirthApi.save 起盘,成功进入 /chart(沿用旧页提交与跳转契约)。
@@ -45,10 +53,9 @@ const CALENDAR_OPTIONS = [
 ] as const;
 type Calendar = (typeof CALENDAR_OPTIONS)[number]['value'];
 
-// 出生地初值 —— 与原型一致默认 浙江省/杭州市/西湖区(区县 ✓ 已选)。
-const DEFAULT_PATH = ['浙江省', '杭州市', '西湖区'];
-// 出生时刻初值 —— 原型静态展示的 1994-02-14 寅时(03:00);月份 0 基,1 = 二月。
-const makeDefaultMoment = () => new Date(1994, 1, 14, 3, 0, 0, 0);
+// 出生时刻的滚轮**中性起点** —— 仅作 picker 打开时的初始滚轮位置,未经滚轮确认前不显示、不计入已填
+// (中性默认防盲提交,spec 实现决策 C);月份 0 基,1 = 二月。出生地则不预选(初始 path 为空,逼选到区县)。
+const makeNeutralMoment = () => new Date(1994, 1, 14, 3, 0, 0, 0);
 
 // 底部弹层遮罩(原型无此态——picker 为原生输入 chrome);半透明黑,一次性值,非通用调色板 token。
 const SHEET_SCRIM = 'rgba(0,0,0,0.5)';
@@ -61,20 +68,49 @@ export default function Onboarding() {
   const router = useRouter();
   const [gender, setGender] = useState<Gender>('male');
   const [calendar, setCalendar] = useState<Calendar>('solar');
-  const [moment, setMoment] = useState<Date>(makeDefaultMoment);
+  const [moment, setMoment] = useState<Date>(makeNeutralMoment);
+  // 触碰标志:出生日期/时辰未经滚轮确认前不算已填(中性默认防盲提交)。
+  const [dateTouched, setDateTouched] = useState(false);
+  const [timeTouched, setTimeTouched] = useState(false);
   const [timeUnknown, setTimeUnknown] = useState(false);
-  const [path, setPath] = useState<string[]>(DEFAULT_PATH);
+  const [path, setPath] = useState<string[]>([]); // 出生地不预选,逼选到区县
   const [picker, setPicker] = useState<'date' | 'time' | null>(null);
   const [busy, setBusy] = useState(false);
 
   const loc = viewForPath(path);
   const hour = hourBranchFromTime(toBirthTime(moment));
 
+  // 头部出口:栈里有上一屏(点用引导 push 进来)→「返回」回来处;否则(登录/注册 replace 进来)→「稍后」进 /chat。
+  const canGoBack = router.canGoBack();
+
   // Cascader 选项:非叶子 → 下钻;叶子 → 定为选中(viewForPath 会据新 path 给出完成态)。
   const onSelectRegion = (value: string) => setPath([...path.slice(0, loc.complete ? -1 : undefined), value]);
   const onCrumbPress = (index: number) => setPath(path.slice(0, index));
 
-  const canSubmit = loc.complete && loc.longitude != null && !busy;
+  // 滚轮确认出生时刻:同步值 + 置对应触碰标志(该半从占位转为已填)。
+  const onMomentChange = (d: Date, mode: 'date' | 'time') => {
+    setMoment(d);
+    if (mode === 'date') setDateTouched(true);
+    else setTimeTouched(true);
+  };
+
+  // 历法:「农历」暂未支持——弹「敬请期待」且不切换,控件恒留公历(不落库/不改 schema,见 RULINGS)。
+  const onCalendarChange = (value: Calendar) => {
+    if (value === 'lunar') {
+      Alert.alert('农历', '农历录入敬请期待，当前请以公历填写出生日期。');
+      return;
+    }
+    setCalendar(value);
+  };
+
+  const canSubmit =
+    canSubmitBirth({
+      locComplete: loc.complete,
+      hasLongitude: loc.longitude != null,
+      dateTouched,
+      timeTouched,
+      timeUnknown,
+    }) && !busy;
 
   const onSubmit = async () => {
     if (loc.longitude == null) {
@@ -104,27 +140,31 @@ export default function Onboarding() {
       scroll
       header={
         <View style={styles.titleRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="返回"
-            onPress={() => router.back()}
-            style={styles.iconBtn}
-            hitSlop={6}
-          >
-            <Icon name="back" color={semantic.textPrimary} size={18} />
-          </Pressable>
-          <View />
+          {canGoBack ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="返回"
+              onPress={() => router.back()}
+              style={styles.iconBtn}
+              hitSlop={10}
+            >
+              <Icon name="back" color={semantic.textPrimary} size={18} />
+            </Pressable>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="稍后填写"
+              onPress={() => router.replace('/chat')}
+              style={styles.later}
+              hitSlop={10}
+            >
+              <Text style={styles.laterText}>稍后</Text>
+            </Pressable>
+          )}
         </View>
       }
     >
-      {/* 步骤条:三段,前两段点亮(原型 .steps)。 */}
-      <View style={styles.steps}>
-        <View style={[styles.step, styles.stepOn]} />
-        <View style={[styles.step, styles.stepOn]} />
-        <View style={styles.step} />
-      </View>
-
-      <Eyebrow>Step 02 · 录入生辰</Eyebrow>
+      <Eyebrow>完善生辰</Eyebrow>
       <HSerif variant="l" style={styles.title}>
         录入你的生辰，为你起盘
       </HSerif>
@@ -143,13 +183,13 @@ export default function Onboarding() {
         />
       </View>
 
-      {/* 历法(公历/农历)—— 展示态本地状态;出生信息 schema 不含历法字段,不随提交发送(见 RULINGS)。 */}
+      {/* 历法(公历/农历)—— 点「农历」弹「敬请期待」且不切换(恒公历);schema 不含历法字段,不随提交发送(见 RULINGS)。 */}
       <View style={styles.field}>
         <Text style={styles.label}>历法</Text>
         <SegmentedControl
           options={CALENDAR_OPTIONS}
           value={calendar}
-          onChange={setCalendar}
+          onChange={onCalendarChange}
           accessibilityLabel="历法"
         />
       </View>
@@ -157,10 +197,11 @@ export default function Onboarding() {
       {/* 出生日期与时辰 */}
       <View style={styles.field}>
         <Text style={styles.label}>出生日期与时辰</Text>
+        {/* 未经滚轮确认前显占位「—」(中性默认;不算已填)——占位/muted 规则收在 PickerTile 内,此处只给原值 + touched。 */}
         <View style={styles.grid3}>
-          <PickerTile k="年" v={String(moment.getFullYear())} onPress={() => setPicker('date')} />
-          <PickerTile k="月" v={pad(moment.getMonth() + 1)} onPress={() => setPicker('date')} />
-          <PickerTile k="日" v={pad(moment.getDate())} onPress={() => setPicker('date')} />
+          <PickerTile k="年" v={String(moment.getFullYear())} touched={dateTouched} onPress={() => setPicker('date')} />
+          <PickerTile k="月" v={pad(moment.getMonth() + 1)} touched={dateTouched} onPress={() => setPicker('date')} />
+          <PickerTile k="日" v={pad(moment.getDate())} touched={dateTouched} onPress={() => setPicker('date')} />
         </View>
         <Pressable
           accessibilityRole="button"
@@ -172,11 +213,14 @@ export default function Onboarding() {
           <Text style={styles.pickerK}>时辰</Text>
           {timeUnknown ? (
             <Text style={styles.pickerV}>未知</Text>
-          ) : (
+          ) : timeTouched ? (
             // 原型 .picker .v：时辰名 + 小字时钟区间「寅时 03:00 – 05:00」；提交仍存所选精确 HH:mm。
             <Text style={styles.pickerV}>
               {hour.name} <Text style={styles.pickerVSmall}>{hour.range}</Text>
             </Text>
+          ) : (
+            // 未经滚轮确认前显占位(中性默认;不算已填)。
+            <Text style={[styles.pickerV, styles.pickerVMuted]}>请选择</Text>
           )}
         </Pressable>
         <View style={styles.unknown}>
@@ -216,15 +260,18 @@ export default function Onboarding() {
       <DobSpinner
         mode={picker}
         value={moment}
-        onChange={setMoment}
+        onChange={onMomentChange}
         onClose={() => setPicker(null)}
       />
     </Screen>
   );
 }
 
-/** 年/月/日 picker 小格(原型 .picker,竖排 k/v),点开日期滚轮。 */
-function PickerTile({ k, v, onPress }: { k: string; v: string; onPress: () => void }) {
+/**
+ * 年/月/日 picker 小格(原型 .picker,竖排 k/v),点开日期滚轮。
+ * 中性默认:未经滚轮确认前(touched=false)显占位「—」且转 muted 色;确认后显传入原值。
+ */
+function PickerTile({ k, v, touched, onPress }: { k: string; v: string; touched: boolean; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -233,7 +280,7 @@ function PickerTile({ k, v, onPress }: { k: string; v: string; onPress: () => vo
       style={styles.picker}
     >
       <Text style={styles.pickerK}>{k}</Text>
-      <Text style={styles.pickerV}>{v}</Text>
+      <Text style={[styles.pickerV, !touched && styles.pickerVMuted]}>{touched ? v : '—'}</Text>
     </Pressable>
   );
 }
@@ -250,7 +297,7 @@ function DobSpinner({
 }: {
   mode: 'date' | 'time' | null;
   value: Date;
-  onChange: (d: Date) => void;
+  onChange: (d: Date, mode: 'date' | 'time') => void;
   onClose: () => void;
 }) {
   if (mode == null) return null;
@@ -262,7 +309,7 @@ function DobSpinner({
     const next = new Date(value);
     if (mode === 'date') next.setFullYear(picked.getFullYear(), picked.getMonth(), picked.getDate());
     else next.setHours(picked.getHours(), picked.getMinutes(), 0, 0);
-    onChange(next);
+    onChange(next, mode);
   };
 
   const spinner = (
@@ -297,8 +344,8 @@ function DobSpinner({
 }
 
 const styles = StyleSheet.create({
-  // 返回头:原型 .apphead .title-row。
-  titleRow: { flexDirection: 'row', alignItems: 'center', paddingTop: 6, paddingBottom: 14 },
+  // 头部出口行:与登录/注册对齐(paddingTop 24);左「返回」图标钮或右推的「稍后」文字钮。
+  titleRow: { flexDirection: 'row', alignItems: 'center', paddingTop: 24, paddingBottom: 14 },
   // 原型 .icon-btn：38×38 / ink-2 底 / line 描边 / r11。
   iconBtn: {
     width: 38,
@@ -310,10 +357,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // 步骤条:原型 .steps margin:4 0 22;.s height3 r2 ink-4;.s.on gold。
-  steps: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 22 },
-  step: { flex: 1, height: 3, borderRadius: 2, backgroundColor: semantic.surfaceTrack },
-  stepOn: { backgroundColor: semantic.accent },
+  // 「稍后」软出口:无上一屏时(登录/注册进入)显示,marginLeft:auto 推到右侧;文字钮观感克制。
+  later: { marginLeft: 'auto', paddingVertical: 8, paddingHorizontal: 4 },
+  laterText: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    letterSpacing: tracking(0.04, 14),
+    color: semantic.textSecondary,
+  },
 
   title: { marginTop: 12, marginBottom: 8 }, // 原型 h-serif margin:12 0 8
   sub: { marginBottom: 24 }, // 原型 .sub margin-bottom:24
@@ -351,6 +402,8 @@ const styles = StyleSheet.create({
   pickerK: { fontFamily: fonts.sans, fontSize: 11, letterSpacing: tracking(0.06, 11), color: semantic.textSecondary },
   // 原型 .picker .v：17 / 象牙 / 等宽数字。
   pickerV: { fontFamily: fonts.sans, fontSize: 17, color: semantic.textPrimary, ...tabularNums },
+  // 未确认占位(「—」/「请选择」):同尺寸、faint 色,读作「尚未填写」。
+  pickerVMuted: { color: semantic.textFaint },
   // 原型 .picker .v small：12 / muted。
   pickerVSmall: { fontFamily: fonts.sans, fontSize: 12, color: semantic.textSecondary },
 
@@ -420,5 +473,6 @@ const styles = StyleSheet.create({
 //   CONTEXT §真太阳时),时辰名由 hourBranchFromTime 从时间派生,仅作阅读辅助。
 // · 出生地经度取所选地点就近经度(见 src/location/regions.ts):精选省/市/区县子集,城市级挂真实经度、
 //   区县就近继承;非全国穷举,可扩充。全量地理编码超出 spec Out of Scope,但经度已随所选地点真实变化。
-// · 历法(公历/农历)为展示态本地状态:BirthProfileInput schema 不含历法字段(spec 禁改 schema),
-//   故仅渲染 SegmentedControl,不随提交发送;农历→公历 换算属日历计算,超出本 issue 范围。
+// · 历法(公历/农历)恒留公历:点「农历」弹「敬请期待」提示并**不切换**(value 恒 solar),防命主把农历
+//   日期当公历静默起错盘(ADR-0009)。BirthProfileInput schema 不含历法字段(spec 禁改 schema),历法
+//   不落库、不随提交发送;农历录入(含农历→公历换算 / schema 迁移)另立含迁移的工单,超出本 issue 范围。

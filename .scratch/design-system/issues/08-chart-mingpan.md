@@ -25,3 +25,5 @@ _Ref: spec §8 (Pillars/Palace are text + Views, not SVG); CONTEXT.md (八字盘
 - 大运：原型此屏无（以奇门取代），删去屏上列表；`ChartApi.decadeFortunes` 数据仍在，未来可另起页承载。
 
 **待人工验收**：视觉 1:1 需 iOS+Android 双端真机核对（spec 判据）；本 issue 属 checkpoint 后批量改造之一。
+
+**更新（2026-08-08）——命盘页暂隐奇门局卡** — 经「以代码为准」核对确认：八字四柱为**真实确定性计算**（`server/charting/bazi.ts` 走 tyme4ts，非模拟盘；实跑 1990-06-15→庚午 壬午 辛亥 乙未、2000-01-01→己卯（含立春换年正确）、真太阳时随经度变动，写入路径 onboarding→`BirthApi.save`→`computeBaziChart`→落库全通）。据此本次任务将命盘页收敛为「**只留八字**」：奇门局与八字无关，`chart.tsx` 置 `SHOW_QIMEN=false` **暂隐**该卡（保留渲染代码与 `SAMPLE_QIMEN`，**非删除**，置 `true` 即恢复；将来奇门应另起页 / 在奇门对话内按起局时间实时排）。保留 ①命主抬头+四柱、②五行强弱（八字派生）、④分享占位键。改动仅命盘页展示，不动 schema/计算/架构，故不新开 ADR。这**反转**了本 issue 初版「保留奇门示例排布」的裁定。

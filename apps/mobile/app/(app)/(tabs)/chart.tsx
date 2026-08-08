@@ -25,16 +25,21 @@ import { hourBranchFromTime } from '../../../src/time/hourBranch';
 
 /**
  * 命盘页 —— 与原型 docs/ui/tianji-app-design.html 的 chart 屏 1:1（spec §8、issue 08）。
- * 三张卡：命主抬头 + 四柱八字盘（Pillars，五行色数据编码）；五行强弱（ElementBars，计数由 chart/fiveElement
- * 从四柱干支派生）；奇门局九宫（QiMenGrid）。顶部标题区含「分享」占位键。真实数据走 ChartApi + BirthApi。
+ * 现两张卡：命主抬头 + 四柱八字盘（Pillars，五行色数据编码）；五行强弱（ElementBars，计数由 chart/fiveElement
+ * 从四柱干支派生）。奇门局卡默认隐藏（SHOW_QIMEN，见下）。顶部标题区含「分享」占位键。真实数据走 ChartApi + BirthApi。
  *
  * 数据边界裁定（spec Out of Scope：禁改 schema、不做排盘/命理计算）：
  * - 四柱/十神/藏干/命主 meta：来自真实 ChartApi + BirthApi。
  * - 五行强弱：清点四柱天干+地支派生（与原型示例盘 0/3/0/3/2 对齐），是既有盘数据的可视化，非新排盘。
  * - 喜用神/忌神、身强弱：属命理判断（out of scope），不编造，故五行强弱卡不含该页脚。
- * - 奇门局：无结构化 API（按 ADR-0001 由 AI 在对话文本中实时起局），故以文末 SAMPLE_QIMEN 示例排布演示版式。
+ * - 奇门局：八字无关；命盘页现只留八字，故 SHOW_QIMEN=false 暂隐该卡（代码与 SAMPLE_QIMEN 保留，待未来另起奇门页 / 对话内实时起局承载）。
  * - 大运：原型 chart 屏无此块（以奇门局取代），按「1:1 对齐原型」删去；数据仍在 ChartApi，未来可另起页承载。
  */
+
+// 命盘页只展示八字（含其派生的五行强弱）。奇门局属另一套系统、与八字无关，故暂隐此卡——
+// 代码与 SAMPLE_QIMEN 保留（不删），置 true 即恢复；未来奇门应另起页 / 在奇门对话内按起局时间实时排。
+const SHOW_QIMEN: boolean = false;
+
 export default function ChartScreen() {
   const router = useRouter();
   const [chart, setChart] = useState<BaziChart | null>(null);
@@ -140,15 +145,17 @@ export default function ChartScreen() {
         <ElementBars bars={bars} />
       </Card>
 
-      {/* 奇门局（示例排布，见文首裁定与 SAMPLE_QIMEN 注释） */}
-      <Card>
-        <View style={styles.sectitle}>
-          <HSerif variant="sec">奇门局</HSerif>
-          <Text style={styles.note}>示例排布</Text>
-        </View>
-        <QiMenGrid cells={SAMPLE_QIMEN} />
-        <Text style={styles.helper}>奇门局按起局时间实时生成，此处为版式示例。</Text>
-      </Card>
+      {/* 奇门局：八字无关，命盘页暂隐（SHOW_QIMEN=false）。代码保留，见文首 flag 注释。 */}
+      {SHOW_QIMEN && (
+        <Card>
+          <View style={styles.sectitle}>
+            <HSerif variant="sec">奇门局</HSerif>
+            <Text style={styles.note}>示例排布</Text>
+          </View>
+          <QiMenGrid cells={SAMPLE_QIMEN} />
+          <Text style={styles.helper}>奇门局按起局时间实时生成，此处为版式示例。</Text>
+        </Card>
+      )}
     </Screen>
   );
 }

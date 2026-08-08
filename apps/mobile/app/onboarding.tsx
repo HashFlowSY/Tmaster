@@ -1,7 +1,7 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import type { Gender } from '@tianji/shared';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, type ChangeEvent, type CSSProperties } from 'react';
 import { Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../src/api/client';
 import { BirthApi } from '../src/api/endpoints';
@@ -290,7 +290,7 @@ function PickerTile({ k, v, touched, onPress }: { k: string; v: string; touched:
   );
 }
 
-// 滚轮视觉 chrome(两端共用):暗色主题 + 象牙字 + 金色高亮 + 24 小时制。
+// 滚轮视觉 chrome(iOS/Android 共用):暗色主题 + 象牙字 + 金色高亮 + 24 小时制。
 const SPINNER_CHROME = {
   display: 'spinner',
   themeVariant: 'dark',
@@ -299,13 +299,28 @@ const SPINNER_CHROME = {
   is24Hour: true,
 } as const;
 
+// Web 原生 <input type=date/time> 的暗色样式(react-native-web 跑在 react-dom,故 web 分支用真 DOM input)。
+const WEB_INPUT_STYLE: CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '12px 14px',
+  fontSize: 17,
+  color: semantic.textPrimary,
+  background: semantic.surfaceInput,
+  border: `1px solid ${semantic.border}`,
+  borderRadius: 12,
+  colorScheme: 'dark', // 让浏览器的日期弹层也走暗色
+};
+
 /**
- * 出生时刻滚轮选择器 —— 草稿 + 确定模型(问题 1 修复)。仅在打开时挂载(父层条件渲染),故 `draft` 每次以
- * `value` 为初值。
- * - iOS:内嵌进暗色底部弹层;拨动滚轮只更新 `draft`,点「确定」才 `onCommit`——**即便未拨动**,确定也算一次
- *   明确选择(→ 置 touched,修「点开确定却仍显占位」);点背景 = 取消,不提交(保持中性默认)。
- * - Android:系统对话框自身即确认 UI,`'set'`(确定)提交、其余(`'dismissed'`)仅关闭。
- * 合并只改该滚轮负责的一半(日期半 / 时辰半),逻辑抽纯函数 `commitSpinner`(见 birthForm.ts,表测覆盖)。
+ * 出生时刻选择器 —— 草稿 + 确定模型(问题 1 修复)。仅在打开时挂载(父层条件渲染),故 `draft` 每次以
+ * `value` 为初值;点「确定」才 `onCommit`——**即便未改动**,确定也算一次明确选择(→ 置 touched,修「点开确定
+ * 却仍显占位」);点背景 = 取消,不提交(保持中性默认)。合并只改该项负责的一半(日期半 / 时辰半),逻辑抽
+ * 纯函数 `commitSpinner`(见 birthForm.ts,表测覆盖)。三端表现:
+ * - **Web**:`@react-native-community/datetimepicker` 无 web 实现(渲染空白),故用浏览器原生
+ *   `<input type=date/time>`(sheet 内),点确定提交草稿。
+ * - **iOS**:暗色底部弹层内嵌原生滚轮,拨动只更新草稿。
+ * - **Android**:系统对话框自身即确认 UI,`'set'`(确定)提交、其余(`'dismissed'`)仅关闭。
  */
 function DobSpinner({
   mode,
@@ -319,6 +334,51 @@ function DobSpinner({
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState(value);
+  const confirm = () => {
+    onCommit(draft, mode);
+    onClose();
+  };
+
+  // Web:浏览器原生 <input>。值以 YYYY-MM-DD / HH:mm 收发,经 commitSpinner 合并进草稿(只改对应半)。
+  if (Platform.OS === 'web') {
+    const onWebChange = (e: ChangeEvent<HTMLInputElement>) => {
+      const v = e.currentTarget.value;
+      if (!v) return;
+      if (mode === 'date') {
+        const [y, m, d] = v.split('-').map(Number);
+        setDraft((cur) => commitSpinner(cur, new Date(y, m - 1, d), 'date'));
+      } else {
+        const [hh, mm] = v.split(':').map(Number);
+        setDraft((cur) => {
+          const picked = new Date(cur);
+          picked.setHours(hh, mm, 0, 0);
+          return commitSpinner(cur, picked, 'time');
+        });
+      }
+    };
+    return (
+      <Modal transparent visible animationType="fade" onRequestClose={onClose}>
+        <Pressable style={styles.sheetBackdrop} onPress={onClose} />
+        <View style={styles.sheet}>
+          <View style={styles.sheetHead}>
+            <Text style={styles.sheetTitle}>{mode === 'date' ? '选择出生日期' : '选择出生时辰'}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="确定" onPress={confirm} hitSlop={8}>
+              <Text style={styles.sheetDone}>确定</Text>
+            </Pressable>
+          </View>
+          <View style={styles.webInputWrap}>
+            <input
+              type={mode === 'date' ? 'date' : 'time'}
+              value={mode === 'date' ? toBirthDate(draft) : toBirthTime(draft)}
+              max={mode === 'date' ? toBirthDate(new Date()) : undefined}
+              onChange={onWebChange}
+              style={WEB_INPUT_STYLE}
+            />
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   if (Platform.OS !== 'ios') {
     const onAndroidChange = (event: DateTimePickerEvent, picked?: Date) => {
@@ -331,10 +391,6 @@ function DobSpinner({
   // iOS:拨动只更新草稿;确定提交草稿(未拨动 → draft===value,仍提交以置 touched)。
   const onIosChange = (_event: DateTimePickerEvent, picked?: Date) => {
     if (picked != null) setDraft((d) => commitSpinner(d, picked, mode));
-  };
-  const confirm = () => {
-    onCommit(draft, mode);
-    onClose();
   };
 
   return (
@@ -447,6 +503,8 @@ const styles = StyleSheet.create({
     borderColor: semantic.border,
     paddingBottom: 24,
   },
+  // web 原生 input 的内边距容器(sheet 内)。
+  webInputWrap: { paddingHorizontal: 20, paddingVertical: 18 },
   sheetHead: {
     flexDirection: 'row',
     alignItems: 'center',

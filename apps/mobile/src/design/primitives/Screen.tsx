@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: gutter.content, // 26
     paddingTop: 12,
-    paddingBottom: 8,
+    paddingBottom: 25,
     borderTopWidth: 1,
     borderTopColor: semantic.borderFaint,
   },
